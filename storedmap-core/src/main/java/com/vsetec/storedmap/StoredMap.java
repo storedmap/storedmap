@@ -1,0 +1,1185 @@
+/*
+ * Copyright 2018 Fyodor Kravchenko <fedd@vsetec.com>.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.vsetec.storedmap;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+
+/**
+ *
+ * A {@code java.util.Map} backed by a record in the database
+ *
+ * @author Fyodor Kravchenko <fedd@vsetec.com>
+ */
+public class StoredMap implements Map<String, Object>, Serializable {
+
+    private final Category _category;
+    private final Holder _holder;
+
+    StoredMap(Category category, Holder holder) {
+        _category = category;
+        _holder = holder;
+    }
+
+    public Category category() {
+        return _category;
+    }
+    
+    public String key(){
+        return _holder.getKey();
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        
+        String driverClassName = (String) in.readObject();
+        String connectionString = (String) in.readObject();
+        Properties properties = (Properties) in.readObject();
+        String appCode = (String) in.readObject();
+        Store store = Store.get(driverClassName, connectionString, properties, appCode);
+
+        String categoryName = (String) in.readObject();
+        Category category = store.getCategory(categoryName);
+
+        String key = (String) in.readObject();
+        StoredMap another = category.get(key);
+
+        try {
+            Field fld = this.getClass().getDeclaredField("_category");
+            fld.setAccessible(true);
+            fld.set(this, category);
+            fld.setAccessible(false);
+
+            fld = this.getClass().getDeclaredField("_holder");
+            fld.setAccessible(true);
+            fld.set(this, another._holder);
+            fld.setAccessible(false);
+        } catch (Exception e) {
+            throw new StoredMapException("Couldn't deserialize stored map with key " + key, e);
+        }
+
+        in.close();
+
+    }
+
+    private void writeObject(ObjectOutputStream out) throws IOException {
+        Store store = _category.getStore();
+        out.writeChars(store.getDriver().getClass().getName());
+        out.writeChars(store.getConnectionString());
+        out.writeObject(store.getProperties());
+        out.writeChars(store.getApplicationCode());
+        out.writeChars(_category.getName());
+        out.writeChars(_holder.getKey());
+    }
+
+    public Object lockObjectToSynchronise() {
+        return _holder;
+    }
+
+    public void lockInStore(long millis) {
+        _category.lockInStore(_holder.getKey(), millis);
+    }
+
+    public void unlockInStore() {
+        _category.unlockInStore(_holder.getKey());
+    }
+
+    public void lockOnMachine() {
+        _holder.lockOnMachine();
+    }
+
+    public void unlockOnMachine() {
+        _holder.unlockOnMachine();
+    }
+
+    // simple
+    @Override
+    public int size() {
+        return _category.getOrLoad(_holder).size();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return _category.getOrLoad(_holder).isEmpty();
+    }
+
+    @Override
+    public boolean containsKey(Object key) {
+        return _category.getOrLoad(_holder).containsKey(key);
+    }
+
+    @Override
+    public boolean containsValue(Object value) {
+        return _category.getOrLoad(_holder).containsValue(value);
+    }
+
+    @Override
+    public Set<String> keySet() {
+        return _category.getOrLoad(_holder).keySet();
+    }
+
+    // simple modifying
+    @Override
+    public Object put(String key, Object value) {
+        synchronized (_holder) {
+            Map map = _category.getOrLoad(_holder);
+            Object ret = map.put(key, value);
+            _category.persist(_holder);
+            return ret;
+        }
+    }
+
+    public Object putAndReturnBacked(String key, Object value) {
+        synchronized (_holder) {
+            Map<String,Object> map = _category.getOrLoad(_holder);
+            map.put(key, value);
+            _category.persist(_holder);
+            return _backupWithMe(value, key);
+        }
+    }
+
+    @Override
+    public Object remove(Object key) {
+        synchronized (_holder) {
+            Map map = _category.getOrLoad(_holder);
+            Object ret = map.remove(key);
+            _category.persist(_holder);
+            return ret;
+        }
+    }
+
+    @Override
+    public void putAll(Map<? extends String, ? extends Object> m) {
+        synchronized (_holder) {
+            Map map = _category.getOrLoad(_holder);
+            map.putAll(m);
+            _category.persist(_holder);
+        }
+    }
+
+    @Override
+    public void clear() {
+        synchronized (_holder) {
+            Map map = _category.getOrLoad(_holder);
+            map.clear();
+            _category.persist(_holder);
+        }
+    }
+
+    // stored backed results
+    // back maps and lists
+    @Override
+    public Object get(Object key) {
+        if(!(key instanceof String)){
+            return null;
+        }
+        synchronized (_holder) {
+            Map<String,Object> map = _category.getOrLoad(_holder);
+            Object ret = map.get(key);
+            ret = _backupWithMe(ret, (String) key);
+            return ret;
+        }
+    }
+
+    @Override
+    public Collection<Object> values() {
+        synchronized (_holder) {
+            Map map = _category.getOrLoad(_holder);
+            Set<String>keys = map.keySet();
+            ArrayList backed = new ArrayList(keys.size() + 3);
+            for (String key : keys) {
+                Object val = map.get(key);
+                backed.add(_backupWithMe(val, key));
+            }
+            return backed;
+        }
+    }
+
+    @Override
+    public Set<Entry<String, Object>> entrySet() {
+        return new EntrySetMain();
+    }
+
+    ////// entryset backed by this map
+    private class EntrySetMain implements Set<Entry<String, Object>> {
+
+        @Override
+        public int size() {
+            return StoredMap.this.size();
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return StoredMap.this.isEmpty();
+        }
+
+        @Override
+        public Iterator<Entry<String, Object>> iterator() {
+            final Map map = _category.getOrLoad(_holder);
+            final Iterator<Entry<String, Object>> it = map.entrySet().iterator();
+
+            return new Iterator<Entry<String, Object>>() {
+                @Override
+                public boolean hasNext() {
+                    return it.hasNext();
+                }
+
+                @Override
+                public Entry<String, Object> next() {
+                    final Entry<String, Object> entry = it.next();
+                    return new Entry<String, Object>() {
+                        @Override
+                        public String getKey() {
+                            return entry.getKey();
+                        }
+
+                        @Override
+                        public Object getValue() {
+                            return _backupWithMe(entry.getValue(), entry.getKey());
+                        }
+
+                        @Override
+                        public Object setValue(Object value) {
+                            return StoredMap.this.put(entry.getKey(), value);
+                        }
+                    };
+                }
+            };
+        }
+
+        @Override
+        public Object[] toArray() {
+            synchronized (StoredMap.this._holder) { // make any sence?
+                ArrayList<Entry<String, Object>> ret = new ArrayList<>();
+                Iterator<Entry<String, Object>> it = iterator();
+                while (it.hasNext()) {
+                    ret.add(it.next());
+                }
+                return ret.toArray();
+            }
+        }
+
+        @Override
+        public <T> T[] toArray(T[] arg0) {
+            synchronized (StoredMap.this._holder) { // make any sence?
+                ArrayList<T> ret = new ArrayList<>();
+                Iterator<Entry<String, Object>> it = iterator();
+                while (it.hasNext()) {
+                    ret.add((T) it.next());
+                }
+                return ret.toArray(arg0);
+            }
+        }
+
+        @Override
+        public boolean add(Entry<String, Object> e) {
+            Object ret = StoredMap.this.put(e.getKey(), e.getValue());
+            return ret != null;
+        }
+
+        @Override
+        public void clear() {
+            StoredMap.this.clear();
+        }
+
+        ///// no need to implement:
+        @Override
+        public boolean contains(Object o) {
+            return _category.getOrLoad(_holder).entrySet().contains(o);
+        }
+
+        @Override
+        public boolean remove(Object o) {
+            if (o instanceof Entry) {
+                Entry kv = (Entry) o;
+                return StoredMap.this.remove(kv.getKey(), kv.getValue());
+            }
+            return false;
+        }
+
+        @Override
+        public boolean containsAll(Collection<?> c) {
+            return _category.getOrLoad(_holder).entrySet().containsAll(c);
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends Entry<String, Object>> c) {
+            synchronized (StoredMap.this._holder) {
+                boolean ret;
+                Map m = _category.getOrLoad(_holder);
+                ret = m.entrySet().addAll(c);
+                if (ret) {
+                    _category.persist(_holder);
+                } else {
+                    //_cache._synced = true;
+                }
+                return ret;
+            }
+        }
+
+        @Override
+        public boolean removeAll(Collection<?> c) {
+            synchronized (StoredMap.this._holder) {
+                boolean ret;
+                Map m = _category.getOrLoad(_holder);
+                ret = m.entrySet().removeAll(c);
+                if (ret) {
+                    _category.persist(_holder);
+                } else {
+                    //_cache._synced = true;
+                }
+                return ret;
+            }
+        }
+
+        @Override
+        public boolean retainAll(Collection<?> c) {
+            synchronized (StoredMap.this._holder) {
+                boolean ret;
+                Map m = _category.getOrLoad(_holder);
+                ret = m.entrySet().retainAll(c);
+                if (ret) {
+                    _category.persist(_holder);
+                } else {
+                    //_cache._synced = true;
+                }
+                return ret;
+            }
+        }
+
+    }
+
+    /////// magic
+    private Object _backupWithMe(final Object value, String key) {
+        return _backupWithMe(value, key, null, null);
+    }
+
+    private Object _backupWithMe(final Object value, String key, Object[] address, Object newKey) {
+
+        if (address == null) {
+            address = new Object[0];
+        } else {
+            Object[] newAddress = new Object[address.length + 1];
+            java.lang.System.arraycopy(address, 0, newAddress, 0, address.length);
+            newAddress[address.length] = newKey;
+            address = newAddress;
+        }
+
+        if (value instanceof Map) {
+            return new BackedMap(key, address);
+        }
+
+        if (value instanceof Collection) {
+            return new BackedList(key, address);
+        }
+
+        return value;
+    }
+
+    private <T> T _getByAddress(Map m, Object key, Object... address) {
+        Object ret = m.get(key);
+
+        for (Object subKey : address) {
+            try {
+                if (ret instanceof Map) {
+                    ret = ((Map) ret).get(subKey);
+                } else if (ret instanceof List) {
+                    ret = ((List) ret).get((int) subKey);
+                } else {
+
+                    Object tmp = new HashMap(1);
+                    try {
+                        ret = (T) tmp;
+                    } catch (ClassCastException ee) {
+                        ret = new ArrayList(1);
+                    }
+
+                    break; // TODO: restore error, probably                   
+                    //throw new RuntimeException("In a map " + Arrays.toString(_multiId._category) + " Wrong Address: " + subKey + "," + Arrays.toString(address));
+                }
+            } catch (ClassCastException e) {
+                throw new RuntimeException("In a map " + _holder.getKey() + " Problem with address: " + subKey + "," + Arrays.toString(address), e);
+            }
+        }
+        return (T) ret;
+    }
+
+    private Object _ensureUnbacked(Object obj) {
+        if (obj instanceof Backed) {
+            obj = ((Backed) obj).unbacked();
+        } else if (obj instanceof Collection) {
+            Collection c = (Collection) obj;
+            Object[] objects = new Object[c.size()];
+            objects = c.toArray(objects);
+            for (int i = 0; i < objects.length; i++) {
+                objects[i] = _ensureUnbacked(objects[i]);
+            }
+            obj = new ArrayList(Arrays.asList(objects));
+        } else if (obj instanceof Map) {
+            Map<? extends Object, ? extends Object> m1 = (Map) obj;
+            Map<? extends Object, ? extends Object> m2 = new HashMap(m1);
+
+            for (Map.Entry entry : m2.entrySet()) {
+                entry.setValue(_ensureUnbacked(entry.getValue()));
+            }
+
+            obj = m2;
+        } else if (obj instanceof Entry) {
+            ((Entry) obj).setValue(_ensureUnbacked(((Entry) obj).getValue()));
+        }
+
+        return obj;
+    }
+
+    public class BackedList implements List<Object>, Serializable, Backed<List> {
+
+        private static final long serialVersionUID = 1L;
+
+        private final String _key;
+        private final Object[] _address;
+        private final int _from, _to;
+
+        private BackedList(String key, Object... address) {
+            _key = key;
+            _address = address;
+            _from = -1;
+            _to = -1;
+        }
+
+        private BackedList(String key, int from, int to, Object... address) {
+            _key = key;
+            _address = address;
+            _from = from;
+            _to = to;
+        }
+
+        @Override
+        public void lockInStore(long millis) {
+            StoredMap.this.lockInStore(millis);
+        }
+
+        @Override
+        public void unlockInStore() {
+            StoredMap.this.unlockInStore();
+        }
+
+        @Override
+        public void lockOnMachine() {
+            StoredMap.this.lockOnMachine();
+        }
+
+        @Override
+        public void unlockOnMachine() {
+            StoredMap.this.unlockOnMachine();
+        }
+
+        @Override
+        public StoredMap storedMap() {
+            return StoredMap.this;
+        }
+
+        @Override
+        public List unbacked() {
+            List ret = _getByAddress(_category.getOrLoad(_holder), _key, _address);
+            if (_from > 0 || _to > 0) {
+                ret = ret.subList(_from, _to);
+            }
+            return ret;
+        }
+
+        // simple
+        @Override
+        public int size() {
+            return unbacked().size();
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return unbacked().isEmpty();
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return unbacked().contains(o);
+        }
+
+        @Override
+        public boolean containsAll(Collection<?> c) {
+            return unbacked().containsAll(c);
+        }
+
+        @Override
+        public int indexOf(Object o) {
+            return unbacked().indexOf(o);
+        }
+
+        @Override
+        public int lastIndexOf(Object o) {
+            return unbacked().lastIndexOf(o);
+        }
+
+        //// modify
+        @Override
+        public Object set(int index, Object element) {
+            synchronized (StoredMap.this._holder) {
+
+                element = _ensureUnbacked(element);
+
+                Map m = _category.getOrLoad(_holder);
+                List l = _getByAddress(m, _key, _address);
+                Object ret = l.set(index, element);
+                _category.persist(_holder);
+                return ret;
+            }
+        }
+
+        @Override
+        public boolean add(Object e) { // TODO: synch, lock
+            synchronized (StoredMap.this._holder) {
+
+                e = _ensureUnbacked(e);
+
+                Map m = _category.getOrLoad(_holder);
+                List l = _getByAddress(m, _key, _address);
+                boolean ret = l.add(e);
+                _category.persist(_holder);
+                return ret;
+            }
+        }
+
+        @Override
+        public boolean remove(Object o) {
+            synchronized (StoredMap.this._holder) {
+                Map m = _category.getOrLoad(_holder);
+                List l = _getByAddress(m, _key, _address);
+                boolean ret = l.remove(o);
+                if (ret) {
+                    _category.persist(_holder);
+                } else {
+                    //_cache._synced = true;
+                }
+                return ret;
+            }
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends Object> c) {
+
+            c = (Collection<?>) _ensureUnbacked(c);
+
+            synchronized (StoredMap.this._holder) {
+                Map m = _category.getOrLoad(_holder);
+                List l = _getByAddress(m, _key, _address);
+                boolean ret = l.addAll(c);
+                if (ret) {
+                    _category.persist(_holder);
+                } else {
+                    //_cache._synced = true;
+                }
+                return ret;
+            }
+        }
+
+        @Override
+        public boolean addAll(int index, Collection<? extends Object> c) {
+            synchronized (StoredMap.this._holder) {
+                c = (Collection<?>) _ensureUnbacked(c);
+
+                Map m = _category.getOrLoad(_holder);
+                List l = _getByAddress(m, _key, _address);
+                boolean ret = l.addAll(index, c);
+                if (ret) {
+                    _category.persist(_holder);
+                }
+                return ret;
+            }
+        }
+
+        @Override
+        public boolean removeAll(Collection<?> c) {
+            synchronized (StoredMap.this._holder) {
+                Map m = _category.getOrLoad(_holder);
+                List l = _getByAddress(m, _key, _address);
+                boolean ret = l.removeAll(c);
+                if (ret) {
+                    _category.persist(_holder);
+                } else {
+                    //_cache._synced = true;
+                }
+                return ret;
+            }
+        }
+
+        @Override
+        public void add(int index, Object element) {
+            synchronized (StoredMap.this._holder) {
+                element = _ensureUnbacked(element);
+                Map m = _category.getOrLoad(_holder);
+                List l = _getByAddress(m, _key, _address);
+                l.add(index, element);
+                _category.persist(_holder);
+            }
+        }
+
+        @Override
+        public Object remove(int index) {
+            synchronized (StoredMap.this._holder) {
+                Map m = _category.getOrLoad(_holder);
+                List l = _getByAddress(m, _key, _address);
+                Object ret = l.remove(index);
+                if (ret != null) {
+                    _category.persist(_holder);
+                } else {
+                    //_cache._synced = true;
+                }
+                return ret;
+            }
+        }
+
+        @Override
+        public void clear() {
+            synchronized (StoredMap.this._holder) {
+                Map m = _category.getOrLoad(_holder);
+                List l = _getByAddress(m, _key, _address);
+                l.clear();
+                _category.persist(_holder);
+            }
+        }
+
+        @Override
+        public boolean retainAll(Collection<?> c) {
+            synchronized (StoredMap.this._holder) {
+                c = (Collection<?>) _ensureUnbacked(c);
+                Map m = _category.getOrLoad(_holder);
+                List l = _getByAddress(m, _key, _address);
+                boolean ret = l.retainAll(c);
+                if (ret) {
+                    _category.persist(_holder);
+                } else {
+                    //_cache._synced = true;
+                }
+                return ret;
+            }
+        }
+
+        ////// backed value
+        @Override
+        public Object get(int index) {
+            synchronized (StoredMap.this._holder) {
+                Map m = _category.getOrLoad(_holder);
+                List l = _getByAddress(m, _key, _address);
+                Object ret = l.get(index);
+                ret = _backupWithMe(ret, _key, _address, index);
+                return ret;
+            }
+        }
+
+        @Override
+        public Iterator<Object> iterator() {
+            synchronized (StoredMap.this._holder) {
+                Map m = _category.getOrLoad(_holder);
+                List l = _getByAddress(m, _key, _address);
+                final Iterator<Object> it = l.iterator();
+                return new Iterator() {
+
+                    int _i = 0;
+
+                    @Override
+                    public boolean hasNext() {
+                        return it.hasNext();
+                    }
+
+                    @Override
+                    public Object next() {
+                        Object ret = it.next();
+                        ret = _backupWithMe(ret, _key, _address, _i);
+                        _i++;
+                        return ret;
+                    }
+
+                };
+            }
+        }
+
+        @Override
+        public Object[] toArray() {
+            synchronized (StoredMap.this._holder) {
+                ArrayList<Object> ret = new ArrayList<>();
+                Iterator<Object> it = iterator();
+                while (it.hasNext()) {
+                    ret.add(it.next());
+                }
+                return ret.toArray();
+            }
+        }
+
+        @Override
+        public <T> T[] toArray(T[] arg0) {
+            synchronized (StoredMap.this._holder) {
+                ArrayList<T> ret = new ArrayList<>();
+                Iterator<Object> it = iterator();
+                while (it.hasNext()) {
+                    ret.add((T) it.next());
+                }
+                return ret.toArray(arg0);
+            }
+        }
+
+        @Override
+        public ListIterator<Object> listIterator(int index) {
+            synchronized (StoredMap.this._holder) {
+                final Map m = _category.getOrLoad(_holder);
+                List l = _getByAddress(m, _key, _address);
+                final ListIterator<Object> it = l.listIterator(index);
+                return new ListIterator() {
+
+                    int _i = 0;
+
+                    @Override
+                    public boolean hasNext() {
+                        return it.hasNext();
+                    }
+
+                    @Override
+                    public Object next() {
+                        Object ret = it.next();
+                        ret = _backupWithMe(ret, _key, _address, _i);
+                        _i++;
+                        return ret;
+                    }
+
+                    @Override
+                    public boolean hasPrevious() {
+                        return it.hasPrevious();
+                    }
+
+                    @Override
+                    public Object previous() {
+                        Object ret = it.previous();
+                        _i--;
+                        ret = _backupWithMe(ret, _key, _address, _i);
+                        return ret;
+                    }
+
+                    @Override
+                    public int nextIndex() {
+                        return it.nextIndex();
+                    }
+
+                    @Override
+                    public int previousIndex() {
+                        return it.previousIndex();
+                    }
+
+                    @Override
+                    public void remove() {
+                        // TODO: can't synch here :( consider throwing exception?
+                        throw new UnsupportedOperationException();
+                        //it.remove();
+                        //_storeMap(m);
+                    }
+
+                    @Override
+                    public void set(Object e) {
+                        // TODO: can't synch here :( consider throwing exception?
+                        throw new UnsupportedOperationException();
+
+                        //e = _ensureUnbacked(e);
+                        //it.set(e);
+                        //_storeMap(m);
+                    }
+
+                    @Override
+                    public void add(Object e) {
+                        // TODO: can't synch here :( consider throwing exception?
+                        throw new UnsupportedOperationException();
+
+                        //e = _ensureUnbacked(e);
+                        //it.add(e);
+                        //_storeMap(m);
+                    }
+
+                };
+            }
+        }
+
+        @Override
+        public ListIterator<Object> listIterator() {
+            return listIterator(0);
+        }
+
+        @Override
+        public List<Object> subList(int fromIndex, int toIndex) {
+            int from, to;
+            if (_from > 0) {
+                from = _from + fromIndex;
+                to = from + toIndex;
+            } else {
+                from = fromIndex;
+                to = toIndex;
+            }
+            if (_to > 0 && to > _to) {
+                to = _to;
+            }
+
+            return new BackedList(_key, from, to, _address);
+        }
+
+    }
+
+    public interface Backed<T> {
+
+        static final long serialVersionUID = 1L; // TODO: do we need this?? h.z.
+
+        public StoredMap storedMap();
+
+        public T unbacked();
+
+        public void lockInStore(long millis);
+
+        public void unlockInStore();
+
+        public void lockOnMachine();
+
+        public void unlockOnMachine();
+    }
+
+    public class BackedMap implements Map<String,Object>, Serializable, Backed<Map> {
+
+        private final String _key;
+        private final Object[] _address;
+
+        private BackedMap(String key, Object... address) {
+            _key = key;
+            _address = address;
+        }
+
+        @Override
+        public void lockInStore(long millis) {
+            StoredMap.this.lockInStore(millis);
+        }
+
+        @Override
+        public void unlockInStore() {
+            StoredMap.this.unlockInStore();
+        }
+
+        @Override
+        public void lockOnMachine() {
+            StoredMap.this.lockOnMachine();
+        }
+
+        @Override
+        public void unlockOnMachine() {
+            StoredMap.this.unlockOnMachine();
+        }
+
+        @Override
+        public StoredMap storedMap() {
+            return StoredMap.this;
+        }
+
+        @Override
+        public Map unbacked() {
+            synchronized (StoredMap.this._holder) {
+                Map ret = _getByAddress(_category.getOrLoad(_holder), _key, _address);
+                return ret;
+            }
+        }
+
+        // simple
+        @Override
+        public int size() {
+            return unbacked().size();
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return unbacked().isEmpty();
+        }
+
+        @Override
+        public boolean containsKey(Object key) {
+            return unbacked().containsKey(key);
+        }
+
+        @Override
+        public boolean containsValue(Object value) {
+            return unbacked().containsValue(value);
+        }
+
+        @Override
+        public Set keySet() {
+            return unbacked().keySet();
+        }
+
+        ///// modifying
+        @Override
+        public Object put(String key, Object value) {
+            synchronized (StoredMap.this._holder) {
+                value = _ensureUnbacked(value);
+                Map m = _category.getOrLoad(_holder);
+                Map l = _getByAddress(m, _key, _address);
+                Object ret = l.put(key, value);
+                _category.persist(_holder);
+                return ret;
+            }
+        }
+
+        @Override
+        public Object remove(Object key) {
+            synchronized (StoredMap.this._holder) {
+                Map m = _category.getOrLoad(_holder);
+                Map l = _getByAddress(m, _key, _address);
+                Object ret = l.remove(key);
+                if (ret != null) {
+                    _category.persist(_holder);
+                } else {
+                    //_cache._synced = true;
+                }
+                return ret;
+            }
+        }
+
+        @Override
+        public void putAll(Map map) {
+            synchronized (StoredMap.this._holder) {
+                map = (Map) _ensureUnbacked(map);
+                Map m = _category.getOrLoad(_holder);
+                Map l = _getByAddress(m, _key, _address);
+                l.putAll(map);
+                _category.persist(_holder);
+            }
+        }
+
+        @Override
+        public void clear() {
+            synchronized (StoredMap.this._holder) {
+                Map m = _category.getOrLoad(_holder);
+                Map l = _getByAddress(m, _key, _address);
+                l.clear();
+                _category.persist(_holder);
+            }
+        }
+
+        ///// backed values
+        @Override
+        public Object get(Object key) {
+            synchronized (StoredMap.this._holder) {
+                Map m = _category.getOrLoad(_holder);
+                Map l = _getByAddress(m, _key, _address);
+                Object ret = l.get(key);
+                ret = _backupWithMe(ret, _key, _address, key);
+                return ret;
+            }
+        }
+
+        @Override
+        public Collection values() {
+            synchronized (StoredMap.this._holder) {
+                Map m = _category.getOrLoad(_holder);
+                Map l = _getByAddress(m, _key, _address);
+                Set<String>keys = l.keySet();
+                ArrayList<Object>backed = new ArrayList<>(keys.size() + 3);
+                for (String key : keys) {
+                    Object val = l.get(key);
+                    backed.add(_backupWithMe(val, _key, _address, key));
+                }
+                return backed;
+            }
+        }
+
+        @Override
+        public Set entrySet() {
+            return new EntrySetBacked();
+        }
+
+        private class EntrySetBacked implements Set<Entry<String, Object>> {
+
+            @Override
+            public int size() {
+                return BackedMap.this.size();
+            }
+
+            @Override
+            public boolean isEmpty() {
+                return BackedMap.this.isEmpty();
+            }
+
+            @Override
+            public Iterator<Entry<String, Object>> iterator() {
+                synchronized (StoredMap.this._holder) {
+                    Map m = _category.getOrLoad(_holder);
+                    Map l = _getByAddress(m, _key, _address);
+                    final Iterator<Entry<String, Object>> it = l.entrySet().iterator();
+
+                    return new Iterator<Entry<String, Object>>() {
+                        @Override
+                        public boolean hasNext() {
+                            return it.hasNext();
+                        }
+
+                        @Override
+                        public Entry<String, Object> next() {
+                            final Entry<String, Object> entry = it.next();
+                            return new Entry<String, Object>() {
+                                @Override
+                                public String getKey() {
+                                    return entry.getKey();
+                                }
+
+                                @Override
+                                public Object getValue() {
+                                    return _backupWithMe(entry.getValue(), _key, _address, entry.getKey());
+                                }
+
+                                @Override
+                                public Object setValue(Object value) {
+                                    return BackedMap.this.put(entry.getKey(), value);
+                                }
+                            };
+                        }
+                    };
+                }
+            }
+
+            @Override
+            public Object[] toArray() {
+                synchronized (StoredMap.this._holder) {
+                    ArrayList<Entry<String, Object>> ret = new ArrayList<>();
+                    Iterator<Entry<String, Object>> it = iterator();
+                    while (it.hasNext()) {
+                        ret.add(it.next());
+                    }
+                    return ret.toArray();
+                }
+            }
+
+            @Override
+            public <T> T[] toArray(T[] arg0) {
+                synchronized (StoredMap.this._holder) {
+                    ArrayList<T> ret = new ArrayList<>();
+                    Iterator<Entry<String, Object>> it = iterator();
+                    while (it.hasNext()) {
+                        ret.add((T) it.next());
+                    }
+                    return ret.toArray(arg0);
+                }
+            }
+
+            @Override
+            public boolean add(Entry<String, Object> e) {
+                Object ret = BackedMap.this.put(e.getKey(), e.getValue());
+                return ret != null;
+            }
+
+            @Override
+            public void clear() {
+                BackedMap.this.clear();
+            }
+
+            ///// no need to implement:
+            @Override
+            public boolean contains(Object o) {
+                return unbacked().entrySet().contains(o);
+            }
+
+            @Override
+            public boolean remove(Object o) {
+                if (o instanceof Entry) {
+                    Entry kv = (Entry) o;
+                    return BackedMap.this.remove(kv.getKey(), kv.getValue());
+                }
+                return false;
+            }
+
+            @Override
+            public boolean containsAll(Collection<?> c) {
+                synchronized (StoredMap.this._holder) {
+                    return unbacked().entrySet().containsAll(c);
+                }
+            }
+
+            @Override
+            public boolean addAll(Collection<? extends Entry<String, Object>> c) {
+                synchronized (StoredMap.this._holder) {
+                    Map m = _category.getOrLoad(_holder);
+                    Map l = _getByAddress(m, _key, _address);
+
+                    //Set<Entry<Object,Object>>entrySet = l.entrySet();
+                    boolean ret = false;
+                    for (Entry<String, Object> entry : c) {
+                        if (l.put(entry.getKey(), _ensureUnbacked(entry.getValue())) != null) {
+                            ret = true;
+                        }
+                    }
+
+                    //ret = l.entrySet().addAll(c);
+                    if (ret) {
+                        _category.persist(_holder);
+                    } else {
+                        //_cache._synced = true;
+                    }
+                    return ret;
+                }
+            }
+
+            @Override
+            public boolean removeAll(Collection<?> c) {
+                synchronized (StoredMap.this._holder) {
+                    boolean ret;
+                    Map m = _category.getOrLoad(_holder);
+                    Map l = _getByAddress(m, _key, _address);
+                    ret = l.entrySet().removeAll(c);
+                    if (ret) {
+                        _category.persist(_holder);
+                    } else {
+                        //_cache._synced = true;
+                    }
+                    return ret;
+                }
+            }
+
+            @Override
+            public boolean retainAll(Collection<?> c) {
+                synchronized (StoredMap.this._holder) {
+                    boolean ret;
+                    Map m = _category.getOrLoad(_holder);
+                    Map l = _getByAddress(m, _key, _address);
+                    ret = l.entrySet().retainAll(c);
+                    if (ret) {
+                        _category.persist(_holder);
+                    } else {
+                        //_cache._synced = true;
+                    }
+                    return ret;
+                }
+            }
+        }
+    }
+}
