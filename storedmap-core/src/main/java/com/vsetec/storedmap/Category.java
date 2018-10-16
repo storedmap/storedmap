@@ -171,7 +171,7 @@ public class Category implements Serializable {
     public void unlockInStore(String key) {
         Object lock;
         synchronized (_lockedInStore) {
-            _driver.removeTagsSorterAndText(key, _lockIndexName, _connection);
+            _driver.removeTagsSorterAndFulltext(key, _lockIndexName, _connection);
             lock = _lockedInStore.remove(key);
             if (lock != null) {
                 synchronized (lock) {

@@ -41,6 +41,10 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
     private final Category _category;
     private final Holder _holder;
+    private byte[]_sorter = null;
+    private boolean _sorterLoaded = false;
+    private String[]_tags = null;
+    private boolean _tagsLoaded = false;
 
     StoredMap(Category category, Holder holder) {
         _category = category;
@@ -53,6 +57,22 @@ public class StoredMap implements Map<String, Object>, Serializable {
     
     public String key(){
         return _holder.getKey();
+    }
+    
+    public byte[] sorter(){
+        if(!_sorterLoaded){
+            _sorter = _category.getStore().getDriver().getSorter(_holder.getKey(), _category.getIndexName(), _category.getStore().getConnection());
+            _sorterLoaded = true;
+        }
+        return _sorter;
+    }
+
+    public String[] tags(){
+        if(!_tagsLoaded){
+            _tags = _category.getStore().getDriver().getTags(_holder.getKey(), _category.getIndexName(), _category.getStore().getConnection());
+            _tagsLoaded = true;
+        }
+        return _tags;
     }
 
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {

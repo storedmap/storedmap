@@ -15,6 +15,8 @@
  */
 package com.vsetec.storedmap;
 
+import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -43,23 +45,33 @@ public interface Driver {
 
     Iterable<String> get(String indexName, Object connection);
 
-    Iterable<String> get(String indexName, Object connection, String... anyOfTags);
+    Iterable<String> get(String indexName, Object connection, String[] anyOfTags);
 
-    Iterable<String> get(String indexName, Object connection, byte[] minSorter, byte[] maxSorter, String... anyOfTags);
+    Iterable<String> get(String indexName, Object connection, byte[] minSorter, byte[] maxSorter);
     
+    Iterable<String> get(String indexName, Object connection, String textQuery);
+    
+    Iterable<String> get(String indexName, Object connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags);
+
+    Iterable<String> get(String indexName, Object connection, String textQuery, String[] anyOfTags);
+
+    Iterable<String> get(String indexName, Object connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags);
+
+    Iterable<String> get(String indexName, Object connection, String textQuery, byte[] minSorter, byte[] maxSorter);
+
 
     void put(String key, String indexName, Object connection, byte[] value, boolean doSynchronously);
 
-    void apply(String key, String indexName, Object connection, byte[] sorter, String text, String... tags);
+    void apply(String key, String indexName, Object connection, byte[] sorter, String... tags);
+    
+    void applyFulltext(String key, String indexName, Object connection, Map<String,Object> map, Locale locale);
 
 
     String[] getTags(String key, String indexName, Object connection);
 
     byte[] getSorter(String key, String indexName, Object connection);
 
-    byte[] getText(String key, String indexName, Object connection);
 
-
-    void removeTagsSorterAndText(String key, String indexName, Object connection);
+    void removeTagsSorterAndFulltext(String key, String indexName, Object connection);
 
 }
