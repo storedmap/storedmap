@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -87,7 +88,8 @@ public class StoredMap implements Map<String, Object>, Serializable {
         Category category = store.getCategory(categoryName);
 
         String key = (String) in.readObject();
-        StoredMap another = category.get(key);
+        Locale locale = (Locale) in.readObject();
+        StoredMap another = category.get(key, locale);
 
         try {
             Field fld = this.getClass().getDeclaredField("_category");
@@ -115,6 +117,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
         out.writeChars(store.getApplicationCode());
         out.writeChars(_category.getName());
         out.writeChars(_holder.getKey());
+        out.writeObject(_holder.getLocale());
     }
 
     public Object lockObjectToSynchronise() {

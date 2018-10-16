@@ -19,6 +19,7 @@ import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
@@ -185,12 +186,12 @@ public class Category implements Serializable {
     
     // simple
     
-    public StoredMap get(String key){
+    public StoredMap get(String key, Locale locale){
         Holder cached;
         synchronized(_cache){
             cached = _cache.get(key);
             if(cached==null){
-                cached = new Holder(key);
+                cached = new Holder(key, locale);
                 _cache.put(key, cached);
             }
         }
@@ -208,25 +209,25 @@ public class Category implements Serializable {
     
     Map<String,Object> getOrLoad(Holder cached){
         synchronized(cached){
-            Map<String,Object>map = cached.get();
+            MapAndLocale map = cached.get();
             if(map==null){
                 String key = cached.getKey();
                 byte[] mapB = _driver.get(key, _indexName, _connection);
                 if(mapB!=null){
-                    map = (Map<String, Object>) Util.bytes2object(mapB);
+                    map = (MapAndLocale) Util.bytes2object(mapB);
                 }else{
-                    map = new LinkedHashMap<>(3);
+                    map = new MapAndLocale(new LinkedHashMap<>(3), cached.getLocale());
                 }
                 cached.put(map);
             }
-            return map;
+            return map.getMap();
         }
     }
     
     void persist(Holder holder){
         synchronized(holder){
             String key = holder.getKey();
-            Map<String, Object>map = holder.get();
+            MapAndLocale map = holder.get();
             assert map!=null;
             byte[]mapB = Util.object2bytes(map);
             _driver.put(key, _indexName, _connection, mapB, false);
