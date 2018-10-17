@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Locale;
@@ -41,43 +42,32 @@ import java.util.Set;
 public class StoredMap implements Map<String, Object>, Serializable {
 
     private final Category _category;
-    private final Holder _holder;
-    private byte[]_sorter = null;
-    private boolean _sorterLoaded = false;
-    private String[]_tags = null;
-    private boolean _tagsLoaded = false;
+    private final WeakHolder _holder;
+//    private byte[] _sorter = null;
+//    private boolean _sorterLoaded = false;
+//    private String[] _tags = null;
+//    private boolean _tagsLoaded = false;
 
-    StoredMap(Category category, Holder holder) {
+    StoredMap(Category category, WeakHolder holder) {
         _category = category;
         _holder = holder;
+        //holder.setStoredMap(this);
     }
 
     public Category category() {
         return _category;
     }
-    
-    public String key(){
+
+    public String key() {
         return _holder.getKey();
     }
-    
-    public byte[] sorter(){
-        if(!_sorterLoaded){
-            _sorter = _category.getStore().getDriver().getSorter(_holder.getKey(), _category.getIndexName(), _category.getStore().getConnection());
-            _sorterLoaded = true;
-        }
-        return _sorter;
-    }
 
-    public String[] tags(){
-        if(!_tagsLoaded){
-            _tags = _category.getStore().getDriver().getTags(_holder.getKey(), _category.getIndexName(), _category.getStore().getConnection());
-            _tagsLoaded = true;
-        }
-        return _tags;
+    WeakHolder holder() {
+        return _holder;
     }
 
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-        
+
         String driverClassName = (String) in.readObject();
         String connectionString = (String) in.readObject();
         Properties properties = (Properties) in.readObject();
@@ -88,8 +78,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
         Category category = store.getCategory(categoryName);
 
         String key = (String) in.readObject();
-        Locale locale = (Locale) in.readObject();
-        StoredMap another = category.get(key, locale);
+        StoredMap another = category.get(key);
 
         try {
             Field fld = this.getClass().getDeclaredField("_category");
@@ -117,19 +106,10 @@ public class StoredMap implements Map<String, Object>, Serializable {
         out.writeChars(store.getApplicationCode());
         out.writeChars(_category.getName());
         out.writeChars(_holder.getKey());
-        out.writeObject(_holder.getLocale());
     }
 
     public Object lockObjectToSynchronise() {
         return _holder;
-    }
-
-    public void lockInStore(long millis) {
-        _category.lockInStore(_holder.getKey(), millis);
-    }
-
-    public void unlockInStore() {
-        _category.unlockInStore(_holder.getKey());
     }
 
     public void lockOnMachine() {
@@ -140,48 +120,101 @@ public class StoredMap implements Map<String, Object>, Serializable {
         _holder.unlockOnMachine();
     }
 
+    private MapAndLocale _getOrLoadForPersist() {
+        synchronized(_holder){
+            Store store = _category.getStore();
+            long waitForLock;
+            while ((waitForLock = store.getDriver().tryLock(_holder.getKey(), _category.getIndexName(), store.getConnection(), 100000)) > 0) {
+                try {
+                    _holder.wait(waitForLock > 1000 ? 1000 : waitForLock);
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException("Unexpected interruption", ex);
+                }
+            }
+            
+            return _getOrLoad();
+        }
+    }
+    
+    private MapAndLocale _getOrLoad() {
+        synchronized (_holder) {
+            MapAndLocale map = _holder.get();
+            if (map == null) {
+                String key = _holder.getKey();
+                Store store = _category.getStore();
+                byte[] mapB = store.getDriver().get(key, _category.getIndexName(), store.getConnection());
+                if (mapB != null) {
+                    map = (MapAndLocale) Util.bytes2object(mapB);
+                } else {
+                    map = new MapAndLocale();
+                }
+                _holder.put(map);
+            }
+            return map;
+        }
+    }
+
+    private void _persist(MapAndLocale mal) {
+        synchronized (_holder) {
+            String key = _holder.getKey();
+            byte[] mapB = Util.object2bytes(mal);
+            Store store = _category.getStore();
+            store.getDriver().put(key, _category.getIndexName(), store.getConnection(), mapB, () -> {
+                
+                store.getDriver().unlock(key, _category.getIndexName(), store.getConnection());
+                _holder.notify();
+                
+            }, mal.getMap(), mal.getLocales(), mal.getSorter(), mal.getTags(), () -> {
+                // do nothing for now
+            });
+        }
+    }
+
+    
+    
+    
     // simple
     @Override
     public int size() {
-        return _category.getOrLoad(_holder).size();
+        return _getOrLoad().getMap().size();
     }
 
     @Override
     public boolean isEmpty() {
-        return _category.getOrLoad(_holder).isEmpty();
+        return _getOrLoad().getMap().isEmpty();
     }
 
     @Override
     public boolean containsKey(Object key) {
-        return _category.getOrLoad(_holder).containsKey(key);
+        return _getOrLoad().getMap().containsKey(key);
     }
 
     @Override
     public boolean containsValue(Object value) {
-        return _category.getOrLoad(_holder).containsValue(value);
+        return _getOrLoad().getMap().containsValue(value);
     }
 
     @Override
     public Set<String> keySet() {
-        return _category.getOrLoad(_holder).keySet();
+        return _getOrLoad().getMap().keySet();
     }
 
     // simple modifying
     @Override
     public Object put(String key, Object value) {
         synchronized (_holder) {
-            Map map = _category.getOrLoad(_holder);
-            Object ret = map.put(key, value);
-            _category.persist(_holder);
+            MapAndLocale map = _getOrLoadForPersist();
+            Object ret = map.getMap().put(key, value);
+            _persist(map);
             return ret;
         }
     }
 
     public Object putAndReturnBacked(String key, Object value) {
         synchronized (_holder) {
-            Map<String,Object> map = _category.getOrLoad(_holder);
-            map.put(key, value);
-            _category.persist(_holder);
+            MapAndLocale map = _getOrLoadForPersist();
+            map.getMap().put(key, value);
+            _persist(map);
             return _backupWithMe(value, key);
         }
     }
@@ -189,9 +222,9 @@ public class StoredMap implements Map<String, Object>, Serializable {
     @Override
     public Object remove(Object key) {
         synchronized (_holder) {
-            Map map = _category.getOrLoad(_holder);
-            Object ret = map.remove(key);
-            _category.persist(_holder);
+            MapAndLocale map = _getOrLoadForPersist();
+            Object ret = map.getMap().remove(key);
+            _persist(map);
             return ret;
         }
     }
@@ -199,18 +232,18 @@ public class StoredMap implements Map<String, Object>, Serializable {
     @Override
     public void putAll(Map<? extends String, ? extends Object> m) {
         synchronized (_holder) {
-            Map map = _category.getOrLoad(_holder);
-            map.putAll(m);
-            _category.persist(_holder);
+            MapAndLocale map = _getOrLoadForPersist();
+            map.getMap().putAll(m);
+            _persist(map);
         }
     }
 
     @Override
     public void clear() {
         synchronized (_holder) {
-            Map map = _category.getOrLoad(_holder);
-            map.clear();
-            _category.persist(_holder);
+            MapAndLocale map = _getOrLoadForPersist();
+            map.getMap().clear();
+            _persist(map);
         }
     }
 
@@ -218,11 +251,11 @@ public class StoredMap implements Map<String, Object>, Serializable {
     // back maps and lists
     @Override
     public Object get(Object key) {
-        if(!(key instanceof String)){
+        if (!(key instanceof String)) {
             return null;
         }
         synchronized (_holder) {
-            Map<String,Object> map = _category.getOrLoad(_holder);
+            Map<String, Object> map = _getOrLoad().getMap();
             Object ret = map.get(key);
             ret = _backupWithMe(ret, (String) key);
             return ret;
@@ -232,8 +265,8 @@ public class StoredMap implements Map<String, Object>, Serializable {
     @Override
     public Collection<Object> values() {
         synchronized (_holder) {
-            Map map = _category.getOrLoad(_holder);
-            Set<String>keys = map.keySet();
+            Map map = _getOrLoad().getMap();
+            Set<String> keys = map.keySet();
             ArrayList backed = new ArrayList(keys.size() + 3);
             for (String key : keys) {
                 Object val = map.get(key);
@@ -263,7 +296,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
         @Override
         public Iterator<Entry<String, Object>> iterator() {
-            final Map map = _category.getOrLoad(_holder);
+            final Map map = _getOrLoad().getMap();
             final Iterator<Entry<String, Object>> it = map.entrySet().iterator();
 
             return new Iterator<Entry<String, Object>>() {
@@ -333,7 +366,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
         ///// no need to implement:
         @Override
         public boolean contains(Object o) {
-            return _category.getOrLoad(_holder).entrySet().contains(o);
+            return _getOrLoad().getMap().entrySet().contains(o);
         }
 
         @Override
@@ -347,19 +380,19 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
         @Override
         public boolean containsAll(Collection<?> c) {
-            return _category.getOrLoad(_holder).entrySet().containsAll(c);
+            return _getOrLoad().getMap().entrySet().containsAll(c);
         }
 
         @Override
         public boolean addAll(Collection<? extends Entry<String, Object>> c) {
             synchronized (StoredMap.this._holder) {
                 boolean ret;
-                Map m = _category.getOrLoad(_holder);
-                ret = m.entrySet().addAll(c);
+                MapAndLocale m = _getOrLoadForPersist();
+                ret = m.getMap().entrySet().addAll(c);
                 if (ret) {
-                    _category.persist(_holder);
+                    _persist(m);
                 } else {
-                    //_cache._synced = true;
+                    sdfs//_cache._synced = true;
                 }
                 return ret;
             }
@@ -369,10 +402,10 @@ public class StoredMap implements Map<String, Object>, Serializable {
         public boolean removeAll(Collection<?> c) {
             synchronized (StoredMap.this._holder) {
                 boolean ret;
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 ret = m.entrySet().removeAll(c);
                 if (ret) {
-                    _category.persist(_holder);
+                    _persist();
                 } else {
                     //_cache._synced = true;
                 }
@@ -384,10 +417,10 @@ public class StoredMap implements Map<String, Object>, Serializable {
         public boolean retainAll(Collection<?> c) {
             synchronized (StoredMap.this._holder) {
                 boolean ret;
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 ret = m.entrySet().retainAll(c);
                 if (ret) {
-                    _category.persist(_holder);
+                    _persist();
                 } else {
                     //_cache._synced = true;
                 }
@@ -528,7 +561,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
         @Override
         public List unbacked() {
-            List ret = _getByAddress(_category.getOrLoad(_holder), _key, _address);
+            List ret = _getByAddress(_getOrLoad().getMap(), _key, _address);
             if (_from > 0 || _to > 0) {
                 ret = ret.subList(_from, _to);
             }
@@ -573,10 +606,10 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
                 element = _ensureUnbacked(element);
 
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 List l = _getByAddress(m, _key, _address);
                 Object ret = l.set(index, element);
-                _category.persist(_holder);
+                _persist();
                 return ret;
             }
         }
@@ -587,10 +620,10 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
                 e = _ensureUnbacked(e);
 
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 List l = _getByAddress(m, _key, _address);
                 boolean ret = l.add(e);
-                _category.persist(_holder);
+                _persist();
                 return ret;
             }
         }
@@ -598,11 +631,11 @@ public class StoredMap implements Map<String, Object>, Serializable {
         @Override
         public boolean remove(Object o) {
             synchronized (StoredMap.this._holder) {
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 List l = _getByAddress(m, _key, _address);
                 boolean ret = l.remove(o);
                 if (ret) {
-                    _category.persist(_holder);
+                    _persist();
                 } else {
                     //_cache._synced = true;
                 }
@@ -616,11 +649,11 @@ public class StoredMap implements Map<String, Object>, Serializable {
             c = (Collection<?>) _ensureUnbacked(c);
 
             synchronized (StoredMap.this._holder) {
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 List l = _getByAddress(m, _key, _address);
                 boolean ret = l.addAll(c);
                 if (ret) {
-                    _category.persist(_holder);
+                    _persist();
                 } else {
                     //_cache._synced = true;
                 }
@@ -633,11 +666,11 @@ public class StoredMap implements Map<String, Object>, Serializable {
             synchronized (StoredMap.this._holder) {
                 c = (Collection<?>) _ensureUnbacked(c);
 
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 List l = _getByAddress(m, _key, _address);
                 boolean ret = l.addAll(index, c);
                 if (ret) {
-                    _category.persist(_holder);
+                    _persist();
                 }
                 return ret;
             }
@@ -646,11 +679,11 @@ public class StoredMap implements Map<String, Object>, Serializable {
         @Override
         public boolean removeAll(Collection<?> c) {
             synchronized (StoredMap.this._holder) {
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 List l = _getByAddress(m, _key, _address);
                 boolean ret = l.removeAll(c);
                 if (ret) {
-                    _category.persist(_holder);
+                    _persist();
                 } else {
                     //_cache._synced = true;
                 }
@@ -662,21 +695,21 @@ public class StoredMap implements Map<String, Object>, Serializable {
         public void add(int index, Object element) {
             synchronized (StoredMap.this._holder) {
                 element = _ensureUnbacked(element);
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 List l = _getByAddress(m, _key, _address);
                 l.add(index, element);
-                _category.persist(_holder);
+                _persist();
             }
         }
 
         @Override
         public Object remove(int index) {
             synchronized (StoredMap.this._holder) {
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 List l = _getByAddress(m, _key, _address);
                 Object ret = l.remove(index);
                 if (ret != null) {
-                    _category.persist(_holder);
+                    _persist();
                 } else {
                     //_cache._synced = true;
                 }
@@ -687,10 +720,10 @@ public class StoredMap implements Map<String, Object>, Serializable {
         @Override
         public void clear() {
             synchronized (StoredMap.this._holder) {
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 List l = _getByAddress(m, _key, _address);
                 l.clear();
-                _category.persist(_holder);
+                _persist();
             }
         }
 
@@ -698,11 +731,11 @@ public class StoredMap implements Map<String, Object>, Serializable {
         public boolean retainAll(Collection<?> c) {
             synchronized (StoredMap.this._holder) {
                 c = (Collection<?>) _ensureUnbacked(c);
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 List l = _getByAddress(m, _key, _address);
                 boolean ret = l.retainAll(c);
                 if (ret) {
-                    _category.persist(_holder);
+                    _persist();
                 } else {
                     //_cache._synced = true;
                 }
@@ -714,7 +747,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
         @Override
         public Object get(int index) {
             synchronized (StoredMap.this._holder) {
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 List l = _getByAddress(m, _key, _address);
                 Object ret = l.get(index);
                 ret = _backupWithMe(ret, _key, _address, index);
@@ -725,7 +758,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
         @Override
         public Iterator<Object> iterator() {
             synchronized (StoredMap.this._holder) {
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 List l = _getByAddress(m, _key, _address);
                 final Iterator<Object> it = l.iterator();
                 return new Iterator() {
@@ -776,7 +809,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
         @Override
         public ListIterator<Object> listIterator(int index) {
             synchronized (StoredMap.this._holder) {
-                final Map m = _category.getOrLoad(_holder);
+                final Map m = _getOrLoad().getMap();
                 List l = _getByAddress(m, _key, _address);
                 final ListIterator<Object> it = l.listIterator(index);
                 return new ListIterator() {
@@ -892,7 +925,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
         public void unlockOnMachine();
     }
 
-    public class BackedMap implements Map<String,Object>, Serializable, Backed<Map> {
+    public class BackedMap implements Map<String, Object>, Serializable, Backed<Map> {
 
         private final String _key;
         private final Object[] _address;
@@ -930,7 +963,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
         @Override
         public Map unbacked() {
             synchronized (StoredMap.this._holder) {
-                Map ret = _getByAddress(_category.getOrLoad(_holder), _key, _address);
+                Map ret = _getByAddress(_getOrLoad().getMap(), _key, _address);
                 return ret;
             }
         }
@@ -966,10 +999,10 @@ public class StoredMap implements Map<String, Object>, Serializable {
         public Object put(String key, Object value) {
             synchronized (StoredMap.this._holder) {
                 value = _ensureUnbacked(value);
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 Map l = _getByAddress(m, _key, _address);
                 Object ret = l.put(key, value);
-                _category.persist(_holder);
+                _persist();
                 return ret;
             }
         }
@@ -977,11 +1010,11 @@ public class StoredMap implements Map<String, Object>, Serializable {
         @Override
         public Object remove(Object key) {
             synchronized (StoredMap.this._holder) {
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 Map l = _getByAddress(m, _key, _address);
                 Object ret = l.remove(key);
                 if (ret != null) {
-                    _category.persist(_holder);
+                    _persist();
                 } else {
                     //_cache._synced = true;
                 }
@@ -993,20 +1026,20 @@ public class StoredMap implements Map<String, Object>, Serializable {
         public void putAll(Map map) {
             synchronized (StoredMap.this._holder) {
                 map = (Map) _ensureUnbacked(map);
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 Map l = _getByAddress(m, _key, _address);
                 l.putAll(map);
-                _category.persist(_holder);
+                _persist();
             }
         }
 
         @Override
         public void clear() {
             synchronized (StoredMap.this._holder) {
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 Map l = _getByAddress(m, _key, _address);
                 l.clear();
-                _category.persist(_holder);
+                _persist();
             }
         }
 
@@ -1014,7 +1047,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
         @Override
         public Object get(Object key) {
             synchronized (StoredMap.this._holder) {
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 Map l = _getByAddress(m, _key, _address);
                 Object ret = l.get(key);
                 ret = _backupWithMe(ret, _key, _address, key);
@@ -1025,10 +1058,10 @@ public class StoredMap implements Map<String, Object>, Serializable {
         @Override
         public Collection values() {
             synchronized (StoredMap.this._holder) {
-                Map m = _category.getOrLoad(_holder);
+                Map m = _getOrLoad().getMap();
                 Map l = _getByAddress(m, _key, _address);
-                Set<String>keys = l.keySet();
-                ArrayList<Object>backed = new ArrayList<>(keys.size() + 3);
+                Set<String> keys = l.keySet();
+                ArrayList<Object> backed = new ArrayList<>(keys.size() + 3);
                 for (String key : keys) {
                     Object val = l.get(key);
                     backed.add(_backupWithMe(val, _key, _address, key));
@@ -1057,7 +1090,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
             @Override
             public Iterator<Entry<String, Object>> iterator() {
                 synchronized (StoredMap.this._holder) {
-                    Map m = _category.getOrLoad(_holder);
+                    Map m = _getOrLoad().getMap();
                     Map l = _getByAddress(m, _key, _address);
                     final Iterator<Entry<String, Object>> it = l.entrySet().iterator();
 
@@ -1151,7 +1184,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
             @Override
             public boolean addAll(Collection<? extends Entry<String, Object>> c) {
                 synchronized (StoredMap.this._holder) {
-                    Map m = _category.getOrLoad(_holder);
+                    Map m = _getOrLoad().getMap();
                     Map l = _getByAddress(m, _key, _address);
 
                     //Set<Entry<Object,Object>>entrySet = l.entrySet();
@@ -1164,7 +1197,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
                     //ret = l.entrySet().addAll(c);
                     if (ret) {
-                        _category.persist(_holder);
+                        _persist();
                     } else {
                         //_cache._synced = true;
                     }
@@ -1176,11 +1209,11 @@ public class StoredMap implements Map<String, Object>, Serializable {
             public boolean removeAll(Collection<?> c) {
                 synchronized (StoredMap.this._holder) {
                     boolean ret;
-                    Map m = _category.getOrLoad(_holder);
+                    Map m = _getOrLoad().getMap();
                     Map l = _getByAddress(m, _key, _address);
                     ret = l.entrySet().removeAll(c);
                     if (ret) {
-                        _category.persist(_holder);
+                        _persist();
                     } else {
                         //_cache._synced = true;
                     }
@@ -1192,11 +1225,11 @@ public class StoredMap implements Map<String, Object>, Serializable {
             public boolean retainAll(Collection<?> c) {
                 synchronized (StoredMap.this._holder) {
                     boolean ret;
-                    Map m = _category.getOrLoad(_holder);
+                    Map m = _getOrLoad().getMap();
                     Map l = _getByAddress(m, _key, _address);
                     ret = l.entrySet().retainAll(c);
                     if (ret) {
-                        _category.persist(_holder);
+                        _persist();
                     } else {
                         //_cache._synced = true;
                     }

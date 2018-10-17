@@ -13,18 +13,40 @@ import java.util.concurrent.LinkedBlockingQueue;
  * @author Fyodor Kravchenko <fedd@vsetec.com>
  */
 public class Applier {
-    
+
     private final ObjectMapper _om = new ObjectMapper();
     private final Store _store;
-    private final LinkedBlockingQueue<String> _fulltexts = new LinkedBlockingQueue<>(1000);
-    private final LinkedBlockingQueue _sorterandtags = new LinkedBlockingQueue(1000);
-    
-    Applier(Store store){
+    private final LinkedBlockingQueue<WeakHolder> _fulltexts = new LinkedBlockingQueue<>(1000);
+    private final LinkedBlockingQueue<Object[]>_sorterandtags = new LinkedBlockingQueue<>(1000);
+
+    Applier(Store store) {
         _store = store;
     }
-    
-    void applyFulltext(StoredMap map){
-        //_om.writeValueAsString(map);
+
+    void indexFulltext(StoredMap map) {
+        WeakHolder holder = map.holder();
+        MapAndLocale mal = holder.get();
+        if (mal == null) {
+            mal = map.category().getOrLoadMapAndLocale(holder);
+        }
+        try {
+            _fulltexts.put(mal);
+        } catch (InterruptedException ex) {
+            throw new RuntimeException("Unexpected interrupt", ex);
+        }
     }
-    
+
+    void applySorterAndTags(StoredMap map) {
+        WeakHolder holder = map.holder();
+        MapAndLocale mal = holder.get();
+        if (mal == null) {
+            mal = map.category().getOrLoadMapAndLocale(holder);
+        }
+        try {
+            _fulltexts.put(mal);
+        } catch (InterruptedException ex) {
+            throw new RuntimeException("Unexpected interrupt", ex);
+        }
+    }
+
 }

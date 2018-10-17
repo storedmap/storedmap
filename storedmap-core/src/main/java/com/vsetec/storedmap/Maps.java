@@ -47,7 +47,7 @@ public class Maps implements Iterable<StoredMap> {
             @Override
             public StoredMap next() {
                 String nextKey = i.next();
-                return _category.get(nextKey, null);
+                return _category.get(nextKey);
             }
         };
                 

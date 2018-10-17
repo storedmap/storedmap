@@ -5,31 +5,37 @@
  */
 package com.vsetec.storedmap;
 
+import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 /**
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
  */
-public class MapAndLocale {
-    
-    private final LinkedHashMap<String,Object>_map;
-    private final Locale _locale;
+public class MapAndLocale implements Serializable {
 
-    MapAndLocale(LinkedHashMap<String, Object> _map, Locale _locale) {
-        this._map = _map;
-        this._locale = _locale;
-    }
+    private final LinkedHashMap<String, Object> _map = new LinkedHashMap<>();
+    private final List<Locale> _locales = new ArrayList(3);
+    private final List<Byte> _sorter = new ArrayList<>();
+    private final List<String>_tags = new ArrayList<>(4);
 
     public LinkedHashMap<String, Object> getMap() {
         return _map;
     }
 
-    public Locale getLocale() {
-        return _locale;
+    public List<Locale> getLocales() {
+        return _locales;
     }
-    
-    
+
+    public List<Byte> getSorter() {
+        return _sorter;
+    }
+
+    public List<String> getTags() {
+        return _tags;
+    }
+
 }

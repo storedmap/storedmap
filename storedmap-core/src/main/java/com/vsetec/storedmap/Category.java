@@ -16,6 +16,7 @@
 package com.vsetec.storedmap;
 
 import java.io.Serializable;
+import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -23,6 +24,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.commons.codec.binary.Base32;
 
 /**
@@ -31,22 +34,19 @@ import org.apache.commons.codec.binary.Base32;
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
  */
-public class Category implements Serializable {
+public class Category {
 
     private final Store _store;
     private final Driver _driver;
     private final Object _connection;
     private final String _name;
     private final String _indexName;
-    private final String _lockIndexName;
-    private boolean _lockIndexIsCreated = false;
-    private final WeakHashMap<String, Holder>_cache = new WeakHashMap<>();
-    private final HashMap<String, Object> _lockedInStore = new HashMap<>();    
+    private final WeakHashMap<String, WeakReference<WeakHolder>> _cache = new WeakHashMap<>();
 
     private Category() {
         throw new UnsupportedOperationException();
     }
-    
+
     Category(Store store, String name) {
 
         _name = name;
@@ -55,16 +55,12 @@ public class Category implements Serializable {
         _connection = store.getConnection();
         _driver = store.getDriver();
 
-        String indexName = store.getApplicationCode() + "_" + name + "_main";
+        String indexName = store.getApplicationCode() + "_" + name;
         _indexName = _translateIndexName(indexName);
-        _driver.createIndexIfDoesNotExist(_connection, _indexName);
 
-        String lockIndexName = store.getApplicationCode() + "_" + name + "_lock";
-        _lockIndexName = _translateIndexName(lockIndexName);
     }
 
-    
-    private String _translateIndexName(String notTranslated){
+    private String _translateIndexName(String notTranslated) {
         String appCode = _store.getApplicationCode();
         String trAppCode;
         if (!appCode.matches("^[a-z][a-z0-9]*$")) {
@@ -73,9 +69,8 @@ public class Category implements Serializable {
         } else {
             trAppCode = appCode;
         }
-        
+
         String indexIndexStorageName = trAppCode + "__indices";
-        _driver.createIndexIfDoesNotExist(_connection, indexIndexStorageName);
 
         String trCatName;
         if (!_name.matches("^[a-z][a-z0-9]*$")) {
@@ -89,26 +84,48 @@ public class Category implements Serializable {
         if (indexName.length() > _driver.getMaximumIndexNameLength()) {
             String indexId = null;
             Iterable<String> indexIndices = _driver.get(indexIndexStorageName, _connection);
+
+            long waitForLock;
+            while ((waitForLock = _driver.tryLock(indexId, indexIndexStorageName, _connection, 10000)) > 0) {
+                try {
+                    Thread.sleep(waitForLock > 100 ? 100 : waitForLock);
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException("Unexpected interruption", ex);
+                }
+            }
+
             for (String indexIndexKey : indexIndices) {
-                byte[]indexIndex = _driver.get(indexIndexKey, indexName, _connection);
-                Map<String,Object>indexIndexMap = (Map<String,Object>) Util.bytes2object(indexIndex);
+                byte[] indexIndex = _driver.get(indexIndexKey, indexName, _connection);
+                Map<String, Object> indexIndexMap = (Map<String, Object>) Util.bytes2object(indexIndex);
                 if (notTranslated.equals(indexIndexMap.get("name"))) {
                     indexId = (String) indexIndexMap.get("id");
                     break;
                 }
             }
-            if (indexId == null) {
-                indexId = UUID.randomUUID().toString();
+
+            if (indexId != null) {
+
+                _driver.unlock(indexId, indexIndexStorageName, _connection);
+
+            } else {
+                final String indexIdFinal = UUID.randomUUID().toString();
+                indexId = indexIdFinal;
                 Map<String, Object> indexIndex = new HashMap();
                 indexIndex.put("name", notTranslated);
                 indexIndex.put("id", indexId);
-                _driver.put(indexId, indexIndexStorageName, _connection, Util.object2bytes(indexIndex), true);
+                _driver.put(indexId, indexIndexStorageName, _connection, Util.object2bytes(indexIndex), new Callback() {
+                    @Override
+                    public void call() {
+                        _driver.unlock(indexIdFinal, indexIndexStorageName, _connection);
+                    }
+                }, null, null, null, null, null);
+
             }
             indexName = indexId;
         }
         return indexName;
     }
-    
+
     public Store getStore() {
         return _store;
     }
@@ -120,122 +137,62 @@ public class Category implements Serializable {
     String getIndexName() {
         return _indexName;
     }
-    
-    void lockInStore(String key, long maxLock){
-        if(!_lockIndexIsCreated){
-            _driver.createIndexIfDoesNotExist(_connection, _lockIndexName);
-            _lockIndexIsCreated = true;
-        }
-        
-        
-        while (true) {
 
-            long now = java.lang.System.currentTimeMillis();
-            final Long lock;
-
-            synchronized (_lockedInStore) {
-                
-                byte[]lockMillisB = _driver.get(key, _lockIndexName, _connection);
-                if(lockMillisB!=null){
-                    lock = (Long) Util.bytes2object(lockMillisB);
-                }else{
-                    lock = null;
-                }
-
-                if (lock == null || lock < now) { // no lock or the lock is in the past
-
-                    Long newLock = now + maxLock;
-                    lockMillisB = Util.object2bytes(newLock);
-                    _driver.put(key, _lockIndexName, _connection, lockMillisB, true);
-                    _lockedInStore.put(key, newLock);
-
-                    break;
-                }
-            }
-
-            synchronized (lock) { // it is still locked there in the storage
-                long whatsleft = lock - now;
-                if (whatsleft <= 0) { // though it was checked above
-                    whatsleft = 5;
-                } else if (whatsleft > 1000) { // for not to wait for too long, because it may have been locked on another machine, and it may have finished
-                    whatsleft = 1000;
-                }
-                try {
-                    lock.wait(whatsleft);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException("Unexpected interruption", e);
-                }
-            }
-        }
-    }
-
-    public void unlockInStore(String key) {
-        Object lock;
-        synchronized (_lockedInStore) {
-            _driver.removeTagsSorterAndFulltext(key, _lockIndexName, _connection);
-            lock = _lockedInStore.remove(key);
-            if (lock != null) {
-                synchronized (lock) {
-                    lock.notify(); // TODO: notifyAll???  // if somebody is waiting on this machine
-                }
-            }
-        }
-    }
-
-    
-    
     // simple
-    
-    public StoredMap get(String key, Locale locale){
-        Holder cached;
-        synchronized(_cache){
-            cached = _cache.get(key);
-            if(cached==null){
-                cached = new Holder(key, locale);
-                _cache.put(key, cached);
+    public StoredMap get(String key) {
+        StoredMap ret;
+        synchronized (_cache) {
+            WeakHolder cached;
+            WeakReference<WeakHolder> wr = _cache.get(key);
+            if (wr != null) {
+                cached = wr.get();
+            } else {
+                cached = null;
+            }
+            if (cached == null) {
+                WeakHolder holder = new WeakHolder(key);
+                ret = new StoredMap(this, holder);
+                _cache.put(key, new WeakReference<>(cached));
+            } else {
+                ret = new StoredMap(this, cached);
             }
         }
-        StoredMap ret = new StoredMap(this, cached);
         return ret;
     }
-    
-    public Maps get(){
+
+    public Maps get() {
         return new Maps(this, _driver.get(_indexName, _connection));
     }
-    
-    public void remove(String key){
-        
-    }
-    
-    Map<String,Object> getOrLoad(Holder cached){
-        synchronized(cached){
-            MapAndLocale map = cached.get();
-            if(map==null){
-                String key = cached.getKey();
-                byte[] mapB = _driver.get(key, _indexName, _connection);
-                if(mapB!=null){
-                    map = (MapAndLocale) Util.bytes2object(mapB);
-                }else{
-                    map = new MapAndLocale(new LinkedHashMap<>(3), cached.getLocale());
-                }
-                cached.put(map);
-            }
-            return map.getMap();
-        }
-    }
-    
-    void persist(Holder holder){
-        synchronized(holder){
-            String key = holder.getKey();
-            MapAndLocale map = holder.get();
-            assert map!=null;
-            byte[]mapB = Util.object2bytes(map);
-            _driver.put(key, _indexName, _connection, mapB, false);
-        }
+
+    public void remove(String key) {
+
     }
 
-
-
-    
-    
+//    MapAndLocale getOrLoadMapAndLocale(WeakHolder cached) {
+//        synchronized (cached) {
+//            MapAndLocale map = cached.get();
+//            if (map == null) {
+//                String key = cached.getKey();
+//                byte[] mapB = _driver.get(key, _indexName, _connection);
+//                if (mapB != null) {
+//                    map = (MapAndLocale) Util.bytes2object(mapB);
+//                } else {
+//                    map = new MapAndLocale(new LinkedHashMap<>(3), cached.getLocale());
+//                }
+//                cached.put(map);
+//            }
+//            return map;
+//        }
+//    }
+//
+//    void persist(WeakHolder holder) {
+//        synchronized (holder) {
+//            String key = holder.getKey();
+//            MapAndLocale map = holder.get();
+//            assert map != null;
+//            byte[] mapB = Util.object2bytes(map);
+//            _driver.put(key, _indexName, _connection, mapB, false);
+//        }
+//    }
+//
 }

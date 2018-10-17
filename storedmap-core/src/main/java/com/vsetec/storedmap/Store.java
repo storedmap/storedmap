@@ -20,8 +20,10 @@ import java.util.Map;
 import java.util.Properties;
 
 /**
- * A database representation
- *
+ * A database representation. The class holds static references to multiple instances of itself,
+ * unique for the database type, database connections string that defines a database of the type,
+ * properties that affect the database connection, and the application code which is used to 
+ * distinguish indexes or tables created in the database that belong to different applications
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
  */
@@ -34,10 +36,10 @@ public class Store {
      * Gets the source object for all categories of stored maps
      *
      *
-     * @param driverClassName
-     * @param connectionString
-     * @param properties
-     * @param appCode
+     * @param driverClassName implementation of {@link com.vsetec.storedmap.Driver}
+     * @param connectionString is used by Driver to connect to the underlying database
+     * @param properties more connection details
+     * @param appCode an application short name which is a short string to be used as prefix for all index name of this connection, 
      * @return
      */
     public static Store get(String driverClassName, String connectionString, Properties properties, String appCode) {

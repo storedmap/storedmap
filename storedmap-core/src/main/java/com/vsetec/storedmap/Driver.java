@@ -15,6 +15,7 @@
  */
 package com.vsetec.storedmap;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
@@ -38,8 +39,6 @@ public interface Driver {
 
     int getMaximumSorterLength();
 
-    void createIndexIfDoesNotExist(Object connection, String indexName);
-
 
     byte[] get(String key, String indexName, Object connection);
 
@@ -60,11 +59,22 @@ public interface Driver {
     Iterable<String> get(String indexName, Object connection, String textQuery, byte[] minSorter, byte[] maxSorter);
 
 
-    void put(String key, String indexName, Object connection, byte[] value, boolean doSynchronously);
-
-    void apply(String key, String indexName, Object connection, byte[] sorter, String... tags);
+    long tryLock(String key, String indexName, Object connection, long milliseconds);
     
-    void applyFulltext(String key, String indexName, Object connection, Map<String,Object> map, Locale locale);
+    void unlock(String key, String indexName, Object connection);
+    
+    
+    void put(
+            String key, 
+            String indexName, 
+            Object connection, 
+            byte[] value, 
+            Callback callbackOnIndex, 
+            Map<String,Object> map, 
+            List<Locale> locales, 
+            List<Byte> sorter, 
+            List<String> tags, 
+            Callback callbackOnAdditionalIndex);
 
 
     String[] getTags(String key, String indexName, Object connection);
@@ -72,6 +82,6 @@ public interface Driver {
     byte[] getSorter(String key, String indexName, Object connection);
 
 
-    void removeTagsSorterAndFulltext(String key, String indexName, Object connection);
+    void removeTagsSorterAndFulltext(String key, String indexName, Object connection, Callback callback);
 
 }

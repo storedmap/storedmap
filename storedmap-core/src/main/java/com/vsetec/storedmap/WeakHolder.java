@@ -16,34 +16,28 @@
 package com.vsetec.storedmap;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 /**
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
  */
-public class Holder {
+public class WeakHolder {
 
     private final String _key;
     private boolean _shortLock = false;
     private WeakReference<MapAndLocale> _wr = new WeakReference<>(null);
-    private Locale _locale = null;
-            
 
-    Holder(String key, Locale locale) {
+    WeakHolder(String key) {
         _key = key;
-        _locale = locale;
     }
 
     String getKey() {
         return _key;
     }
-    
-    Locale getLocale(){
-        return _locale;
-    }
-    
+
     synchronized void put(MapAndLocale map) {
         if (map == null) {
             _wr = null;
@@ -51,7 +45,6 @@ public class Holder {
             MapAndLocale curMap = _wr.get();
             if (curMap != map) { // don't replace the object if we're reputting it
                 _wr = new WeakReference<>(map);
-                _locale = map.getLocale();
             }
         }
     }
