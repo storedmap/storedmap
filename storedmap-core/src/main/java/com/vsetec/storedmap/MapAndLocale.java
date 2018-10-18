@@ -21,21 +21,30 @@ public class MapAndLocale implements Serializable {
     private final List<Locale> _locales = new ArrayList(3);
     private final List<Byte> _sorter = new ArrayList<>();
     private final List<String>_tags = new ArrayList<>(4);
+    private transient Thread _takenForPersistIn = null;
 
-    public LinkedHashMap<String, Object> getMap() {
+    LinkedHashMap<String, Object> getMap() {
         return _map;
     }
 
-    public List<Locale> getLocales() {
+    List<Locale> getLocales() {
         return _locales;
     }
 
-    public List<Byte> getSorter() {
+    List<Byte> getSorter() {
         return _sorter;
     }
 
-    public List<String> getTags() {
+    List<String> getTags() {
         return _tags;
     }
+    
+    Thread getTakenForPersistIn(){
+        return _takenForPersistIn;
+    }
 
+    public void setTakenForPersistIn(Thread _takenForPersistIn) {
+        this._takenForPersistIn = _takenForPersistIn;
+    }
+    
 }

@@ -122,20 +122,44 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
     private MapAndLocale _getOrLoadForPersist() {
         synchronized(_holder){
-            Store store = _category.getStore();
-            long waitForLock;
-            while ((waitForLock = store.getDriver().tryLock(_holder.getKey(), _category.getIndexName(), store.getConnection(), 100000)) > 0) {
-                try {
-                    _holder.wait(waitForLock > 1000 ? 1000 : waitForLock);
-                } catch (InterruptedException ex) {
-                    throw new RuntimeException("Unexpected interruption", ex);
+
+            MapAndLocale ret = _getOrLoad();
+            
+            while(true){
+
+                Thread whosWorkingWithIt = ret.getTakenForPersistIn();
+                if(whosWorkingWithIt==null){ // nobody is working with it of this machine
+
+                    Store store = _category.getStore();
+                    long waitForLock;
+                    // wait for releasing on other machines then lock for ourselves
+                    while ((waitForLock = store.getDriver().tryLock(_holder.getKey(), _category.getIndexName(), store.getConnection(), 100000)) > 0) {
+                        try {
+                            _holder.wait(waitForLock > 1000 ? 1000 : waitForLock);
+                        } catch (InterruptedException ex) {
+                            throw new RuntimeException("Unexpected interruption", ex);
+                        }
+                    }
+
+                    ret.setTakenForPersistIn(Thread.currentThread()); // mark for all on this machine that we're working with it
+                    break;
+
+                }else if(whosWorkingWithIt!=Thread.currentThread()){ // if somebody on this machine has taken it
+                    try{
+                        _holder.wait(); // wait for them to notify us, then move on with this loop
+                    } catch (InterruptedException ex) {
+                        throw new RuntimeException("Unexpected interruption", ex);
+                    }
+                }else{ // it was us! 
+                    // just nothing to do as it's already marked for us
+                    break;
                 }
             }
-            
-            return _getOrLoad();
+
+            return ret;
         }
     }
-    
+
     private MapAndLocale _getOrLoad() {
         synchronized (_holder) {
             MapAndLocale map = _holder.get();
@@ -154,25 +178,23 @@ public class StoredMap implements Map<String, Object>, Serializable {
         }
     }
 
-    private void _persist(MapAndLocale mal) {
+    private void _persist(final MapAndLocale mal) {
         synchronized (_holder) {
             String key = _holder.getKey();
             byte[] mapB = Util.object2bytes(mal);
             Store store = _category.getStore();
             store.getDriver().put(key, _category.getIndexName(), store.getConnection(), mapB, () -> {
-                
+
                 store.getDriver().unlock(key, _category.getIndexName(), store.getConnection());
+                //_iAmWorkingWithIt.remove();
                 _holder.notify();
-                
+
             }, mal.getMap(), mal.getLocales(), mal.getSorter(), mal.getTags(), () -> {
                 // do nothing for now
             });
         }
     }
 
-    
-    
-    
     // simple
     @Override
     public int size() {
