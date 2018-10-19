@@ -15,20 +15,18 @@
  */
 package com.vsetec.storedmap;
 
-import java.io.InputStream;
 import java.util.Iterator;
-import java.util.Map;
 
 /**
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
  */
-public class Maps implements Iterable<StoredMap> {
+public class StoredMaps implements Iterable<StoredMap> {
     
     private final Iterable<String>_iterable;
     private final Category _category;
     
-    Maps(Category category, Iterable<String> iterable){
+    StoredMaps(Category category, Iterable<String> iterable){
         _iterable = iterable;
         _category = category;
     }

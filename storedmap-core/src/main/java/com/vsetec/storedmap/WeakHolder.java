@@ -16,9 +16,6 @@
 package com.vsetec.storedmap;
 
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 
 /**
  *
@@ -27,29 +24,36 @@ import java.util.Locale;
 public class WeakHolder {
 
     private final String _key;
-    private boolean _shortLock = false;
-    private WeakReference<MapAndLocale> _wr = new WeakReference<>(null);
+    private final Category _category;
+    //private boolean _shortLock = false;
+    private WeakReference<MapData> _wr = new WeakReference<>(null);
+    private transient Thread _takenForPersistIn = null; 
 
-    WeakHolder(String key) {
+    WeakHolder(String key, Category category) {
         _key = key;
+        _category = category;
     }
 
     String getKey() {
         return _key;
     }
 
-    synchronized void put(MapAndLocale map) {
+    public Category getCategory() {
+        return _category;
+    }
+
+    synchronized void put(MapData map) {
         if (map == null) {
             _wr = null;
         } else {
-            MapAndLocale curMap = _wr.get();
+            MapData curMap = _wr.get();
             if (curMap != map) { // don't replace the object if we're reputting it
                 _wr = new WeakReference<>(map);
             }
         }
     }
 
-    synchronized MapAndLocale get() {
+    synchronized MapData get() {
         if (_wr == null) {
             return null;
         } else {
@@ -57,23 +61,31 @@ public class WeakHolder {
         }
     }
 
-    synchronized void lockOnMachine() {
-        while (true) {
-            if (!_shortLock) {
-                break;
-            }
-            try {
-                this.wait();
-            } catch (InterruptedException ex) {
-                throw new RuntimeException("Unexpected interruption", ex);
-            }
-        }
-        _shortLock = true;
+//    synchronized void lockOnMachine() {
+//        while (true) {
+//            if (!_shortLock) {
+//                break;
+//            }
+//            try {
+//                this.wait();
+//            } catch (InterruptedException ex) {
+//                throw new RuntimeException("Unexpected interruption", ex);
+//            }
+//        }
+//        _shortLock = true;
+//    }
+//
+//    synchronized void unlockOnMachine() {
+//        _shortLock = false;
+//        this.notify();
+//    }
+
+    Thread getTakenForPersistIn(){
+        return _takenForPersistIn;
     }
 
-    synchronized void unlockOnMachine() {
-        _shortLock = false;
-        this.notify();
+    public void setTakenForPersistIn(Thread _takenForPersistIn) {
+        this._takenForPersistIn = _takenForPersistIn;
     }
-
+    
 }

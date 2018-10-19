@@ -15,17 +15,12 @@
  */
 package com.vsetec.storedmap;
 
-import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.commons.codec.binary.Base32;
 
 /**
@@ -150,7 +145,7 @@ public class Category {
                 cached = null;
             }
             if (cached == null) {
-                WeakHolder holder = new WeakHolder(key);
+                WeakHolder holder = new WeakHolder(key, this);
                 ret = new StoredMap(this, holder);
                 _cache.put(key, new WeakReference<>(cached));
             } else {
@@ -160,8 +155,8 @@ public class Category {
         return ret;
     }
 
-    public Maps get() {
-        return new Maps(this, _driver.get(_indexName, _connection));
+    public StoredMaps get() {
+        return new StoredMaps(this, _driver.get(_indexName, _connection));
     }
 
     public void remove(String key) {
