@@ -16,6 +16,7 @@
 package com.vsetec.storedmap;
 
 import java.lang.ref.WeakReference;
+import java.util.Objects;
 
 /**
  *
@@ -25,9 +26,7 @@ public class WeakHolder {
 
     private final String _key;
     private final Category _category;
-    //private boolean _shortLock = false;
     private WeakReference<MapData> _wr = new WeakReference<>(null);
-    private transient Thread _takenForPersistIn = null; 
 
     WeakHolder(String key, Category category) {
         _key = key;
@@ -61,31 +60,33 @@ public class WeakHolder {
         }
     }
 
-//    synchronized void lockOnMachine() {
-//        while (true) {
-//            if (!_shortLock) {
-//                break;
-//            }
-//            try {
-//                this.wait();
-//            } catch (InterruptedException ex) {
-//                throw new RuntimeException("Unexpected interruption", ex);
-//            }
-//        }
-//        _shortLock = true;
-//    }
-//
-//    synchronized void unlockOnMachine() {
-//        _shortLock = false;
-//        this.notify();
-//    }
-
-    Thread getTakenForPersistIn(){
-        return _takenForPersistIn;
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 89 * hash + Objects.hashCode(this._key);
+        hash = 89 * hash + Objects.hashCode(this._category);
+        return hash;
     }
 
-    public void setTakenForPersistIn(Thread _takenForPersistIn) {
-        this._takenForPersistIn = _takenForPersistIn;
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final WeakHolder other = (WeakHolder) obj;
+        if (!Objects.equals(this._key, other._key)) {
+            return false;
+        }
+        if (!Objects.equals(this._category, other._category)) {
+            return false;
+        }
+        return true;
     }
-    
+
 }

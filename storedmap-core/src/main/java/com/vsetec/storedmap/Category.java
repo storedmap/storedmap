@@ -19,6 +19,7 @@ import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import org.apache.commons.codec.binary.Base32;
@@ -163,31 +164,33 @@ public class Category {
 
     }
 
-//    MapAndLocale getOrLoadMapAndLocale(WeakHolder cached) {
-//        synchronized (cached) {
-//            MapAndLocale map = cached.get();
-//            if (map == null) {
-//                String key = cached.getKey();
-//                byte[] mapB = _driver.get(key, _indexName, _connection);
-//                if (mapB != null) {
-//                    map = (MapAndLocale) Util.bytes2object(mapB);
-//                } else {
-//                    map = new MapAndLocale(new LinkedHashMap<>(3), cached.getLocale());
-//                }
-//                cached.put(map);
-//            }
-//            return map;
-//        }
-//    }
-//
-//    void persist(WeakHolder holder) {
-//        synchronized (holder) {
-//            String key = holder.getKey();
-//            MapAndLocale map = holder.get();
-//            assert map != null;
-//            byte[] mapB = Util.object2bytes(map);
-//            _driver.put(key, _indexName, _connection, mapB, false);
-//        }
-//    }
-//
+    @Override
+    public int hashCode() {
+        int hash = 5;
+        hash = 53 * hash + Objects.hashCode(this._store);
+        hash = 53 * hash + Objects.hashCode(this._name);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Category other = (Category) obj;
+        if (!Objects.equals(this._name, other._name)) {
+            return false;
+        }
+        if (!Objects.equals(this._store, other._store)) {
+            return false;
+        }
+        return true;
+    }
+
 }

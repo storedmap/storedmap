@@ -17,13 +17,16 @@ package com.vsetec.storedmap;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 
 /**
- * A database representation. The class holds static references to multiple instances of itself,
- * unique for the database type, database connections string that defines a database of the type,
- * properties that affect the database connection, and the application code which is used to 
- * distinguish indexes or tables created in the database that belong to different applications
+ * A database representation. The class holds static references to multiple
+ * instances of itself, unique for the database type, database connections
+ * string that defines a database of the type, properties that affect the
+ * database connection, and the application code which is used to distinguish
+ * indexes or tables created in the database that belong to different
+ * applications
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
  */
@@ -36,10 +39,13 @@ public class Store {
      * Gets the source object for all categories of stored maps
      *
      *
-     * @param driverClassName implementation of {@link com.vsetec.storedmap.Driver}
-     * @param connectionString is used by Driver to connect to the underlying database
+     * @param driverClassName implementation of
+     * {@link com.vsetec.storedmap.Driver}
+     * @param connectionString is used by Driver to connect to the underlying
+     * database
      * @param properties more connection details
-     * @param appCode an application short name which is a short string to be used as prefix for all index name of this connection, 
+     * @param appCode an application short name which is a short string to be
+     * used as prefix for all index name of this connection,
      * @return
      */
     public static Store get(String driverClassName, String connectionString, Properties properties, String appCode) {
@@ -84,15 +90,18 @@ public class Store {
     private final Map<String, Category> _categories = new HashMap<>();
     private final String _appCode;
     private final Driver _driver;
+    private final String _driverClassName;
     private final Object _connection;
     private final String _connectionString;
     private final Properties _properties;
+    private final Persister _persister = new Persister(this);
 
     private Store() {
         throw new UnsupportedOperationException();
     }
 
     private Store(String driverClassname, String connectionString, Properties properties, String appCode) {
+        _driverClassName = driverClassname;
         Driver driver;
         try {
             Class driverClass = Class.forName(driverClassname);
@@ -117,6 +126,10 @@ public class Store {
     protected void finalize() throws Throwable {
         _driver.closeConnection(_connection);
         super.finalize(); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    public Persister getPersister() {
+        return _persister;
     }
 
     public Driver getDriver() {
@@ -146,6 +159,43 @@ public class Store {
             _categories.put(categoryName, ret);
         }
         return ret;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 19 * hash + Objects.hashCode(this._appCode);
+        hash = 19 * hash + Objects.hashCode(this._driverClassName);
+        hash = 19 * hash + Objects.hashCode(this._connectionString);
+        hash = 19 * hash + Objects.hashCode(this._properties);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Store other = (Store) obj;
+        if (!Objects.equals(this._appCode, other._appCode)) {
+            return false;
+        }
+        if (!Objects.equals(this._driverClassName, other._driverClassName)) {
+            return false;
+        }
+        if (!Objects.equals(this._connectionString, other._connectionString)) {
+            return false;
+        }
+        if (!Objects.equals(this._properties, other._properties)) {
+            return false;
+        }
+        return true;
     }
 
 }
