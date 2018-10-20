@@ -80,10 +80,7 @@ public class MapData implements Serializable {
         if (!Objects.equals(this._sorter, other._sorter)) {
             return false;
         }
-        if (!Objects.equals(this._tags, other._tags)) {
-            return false;
-        }
-        return true;
+        return Objects.equals(this._tags, other._tags);
     }
 
 }

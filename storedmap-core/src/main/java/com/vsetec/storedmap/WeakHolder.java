@@ -83,10 +83,7 @@ public class WeakHolder {
         if (!Objects.equals(this._key, other._key)) {
             return false;
         }
-        if (!Objects.equals(this._category, other._category)) {
-            return false;
-        }
-        return true;
+        return Objects.equals(this._category, other._category);
     }
 
 }

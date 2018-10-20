@@ -109,11 +109,8 @@ public class Category {
                 Map<String, Object> indexIndex = new HashMap();
                 indexIndex.put("name", notTranslated);
                 indexIndex.put("id", indexId);
-                _driver.put(indexId, indexIndexStorageName, _connection, Util.object2bytes(indexIndex), new Callback() {
-                    @Override
-                    public void call() {
-                        _driver.unlock(indexIdFinal, indexIndexStorageName, _connection);
-                    }
+                _driver.put(indexId, indexIndexStorageName, _connection, Util.object2bytes(indexIndex), () -> {
+                    _driver.unlock(indexIdFinal, indexIndexStorageName, _connection);
                 }, null, null, null, null, null);
 
             }
@@ -187,10 +184,7 @@ public class Category {
         if (!Objects.equals(this._name, other._name)) {
             return false;
         }
-        if (!Objects.equals(this._store, other._store)) {
-            return false;
-        }
-        return true;
+        return Objects.equals(this._store, other._store);
     }
 
 }

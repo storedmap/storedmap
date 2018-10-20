@@ -89,7 +89,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
             fld.setAccessible(true);
             fld.set(this, another._holder);
             fld.setAccessible(false);
-        } catch (Exception e) {
+        } catch (IllegalAccessException | IllegalArgumentException | NoSuchFieldException | SecurityException e) {
             throw new StoredMapException("Couldn't deserialize stored map with key " + key, e);
         }
 
@@ -131,24 +131,6 @@ public class StoredMap implements Map<String, Object>, Serializable {
         }
     }
 
-//    private void _persist(final MapAndLocale mal) {
-//        synchronized (_holder) {
-//            String key = _holder.getKey();
-//            byte[] mapB = Util.object2bytes(mal);
-//            Store store = _category.getStore();
-//            store.getDriver().put(key, _category.getIndexName(), store.getConnection(), mapB, () -> {
-//
-//                store.getDriver().unlock(key, _category.getIndexName(), store.getConnection());
-//                _holder.setTakenForPersistIn(null);
-//                mal.setTmpHolder(null);
-//                _holder.notify();
-//
-//            }, mal.getMap(), mal.getLocales(), mal.getSorter(), mal.getTags(), () -> {
-//                // do nothing for now
-//            });
-//        }
-//    }
-//
     // simple
     @Override
     public int size() {
@@ -1236,10 +1218,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
         if (!Objects.equals(this._category, other._category)) {
             return false;
         }
-        if (!Objects.equals(this._holder, other._holder)) {
-            return false;
-        }
-        return true;
+        return Objects.equals(this._holder, other._holder);
     }
 
 }

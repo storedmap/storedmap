@@ -97,12 +97,12 @@ public interface Driver {
             String indexName, 
             Object connection, 
             byte[] value, 
-            Callback callbackOnIndex, 
+            Runnable callbackOnIndex, 
             Map<String,Object> map, 
             List<Locale> locales, 
             List<Byte> sorter, 
             List<String> tags, 
-            Callback callbackOnAdditionalIndex);
+            Runnable callbackOnAdditionalIndex);
 
 
     String[] getTags(String key, String indexName, Object connection);
@@ -110,6 +110,6 @@ public interface Driver {
     byte[] getSorter(String key, String indexName, Object connection);
 
 
-    void removeTagsSorterAndFulltext(String key, String indexName, Object connection, Callback callback);
+    void removeTagsSorterAndFulltext(String key, String indexName, Object connection, Runnable callback);
 
 }

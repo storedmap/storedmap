@@ -15,6 +15,7 @@
  */
 package com.vsetec.storedmap;
 
+import java.io.Closeable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -30,7 +31,7 @@ import java.util.Properties;
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
  */
-public class Store {
+public class Store implements Closeable {
 
     // stores cache: driverClass - connectionString - properties - appCode --- store
     private final static Map<String, Map<String, Map<Properties, Map<String, Store>>>> STORES = new HashMap<>();
@@ -106,7 +107,7 @@ public class Store {
         try {
             Class driverClass = Class.forName(driverClassname);
             driver = (Driver) driverClass.newInstance();
-        } catch (Exception e) {
+        } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
             throw new StoredMapException("Couldn't load the driver " + driverClassname, e);
         }
 
@@ -123,9 +124,8 @@ public class Store {
     }
 
     @Override
-    protected void finalize() throws Throwable {
+    public void close() {
         _driver.closeConnection(_connection);
-        super.finalize(); //To change body of generated methods, choose Tools | Templates.
     }
 
     public Persister getPersister() {
@@ -192,10 +192,7 @@ public class Store {
         if (!Objects.equals(this._connectionString, other._connectionString)) {
             return false;
         }
-        if (!Objects.equals(this._properties, other._properties)) {
-            return false;
-        }
-        return true;
+        return Objects.equals(this._properties, other._properties);
     }
 
 }
