@@ -158,7 +158,10 @@ public class Category {
     }
 
     public void remove(String key) {
-
+        synchronized(_cache){
+            _store.getDriver().remove(key, getIndexName(), key, null);
+            _cache.remove(key);
+        }
     }
 
     @Override

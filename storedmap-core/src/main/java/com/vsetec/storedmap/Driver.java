@@ -46,17 +46,17 @@ public interface Driver {
 
     Iterable<String> get(String indexName, Object connection, String[] anyOfTags);
 
-    Iterable<String> get(String indexName, Object connection, byte[] minSorter, byte[] maxSorter);
+    Iterable<String> get(String indexName, Object connection, byte[] minSorter, byte[] maxSorter, boolean ascending);
     
     Iterable<String> get(String indexName, Object connection, String textQuery);
     
-    Iterable<String> get(String indexName, Object connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags);
+    Iterable<String> get(String indexName, Object connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending);
 
     Iterable<String> get(String indexName, Object connection, String textQuery, String[] anyOfTags);
 
-    Iterable<String> get(String indexName, Object connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags);
+    Iterable<String> get(String indexName, Object connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending);
 
-    Iterable<String> get(String indexName, Object connection, String textQuery, byte[] minSorter, byte[] maxSorter);
+    Iterable<String> get(String indexName, Object connection, String textQuery, byte[] minSorter, byte[] maxSorter, boolean ascending);
 
 
     /** Tries to lock the key in a specified index or returns the value indicating that the key is already locked.
@@ -77,7 +77,7 @@ public interface Driver {
      * @param milliseconds the maximum amount of time the new lock is active before it will be automatically considered to be released
      * @return 
      */
-    long tryLock(String key, String indexName, Object connection, long milliseconds);
+    int tryLock(String key, String indexName, Object connection, int milliseconds);
     
     /**
      * Unlock the key in the specified index.
@@ -105,11 +105,6 @@ public interface Driver {
             Runnable callbackOnAdditionalIndex);
 
 
-    String[] getTags(String key, String indexName, Object connection);
-
-    byte[] getSorter(String key, String indexName, Object connection);
-
-
-    void removeTagsSorterAndFulltext(String key, String indexName, Object connection, Runnable callback);
+    void remove(String key, String indexName, Object connection, Runnable callback);
 
 }
