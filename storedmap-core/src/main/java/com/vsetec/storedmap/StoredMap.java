@@ -23,10 +23,12 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
@@ -128,6 +130,43 @@ public class StoredMap implements Map<String, Object>, Serializable {
                 _holder.put(map);
             }
             return map;
+        }
+    }
+
+    // sorting and filtering metadata
+    public List<Locale> locales() {
+        return Collections.unmodifiableList(getMapData().getLocales());
+    }
+
+    public void locales(List<Locale> locales) {
+        synchronized (_holder) {
+            MapData map = _getOrLoadForPersist();
+            map.getLocales().clear();
+            map.getLocales().addAll(locales);
+        }
+    }
+
+    public List<Byte> sorter() {
+        return Collections.unmodifiableList(getMapData().getSorter());
+    }
+
+    public void sorter(List<Byte> sorter) {
+        synchronized (_holder) {
+            MapData map = _getOrLoadForPersist();
+            map.getSorter().clear();
+            map.getSorter().addAll(sorter);
+        }
+    }
+
+    public List<String> tags() {
+        return Collections.unmodifiableList(getMapData().getTags());
+    }
+
+    public void tags(List<String> tags) {
+        synchronized (_holder) {
+            MapData map = _getOrLoadForPersist();
+            map.getTags().clear();
+            map.getTags().addAll(tags);
         }
     }
 
