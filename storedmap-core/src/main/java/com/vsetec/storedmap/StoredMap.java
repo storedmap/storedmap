@@ -20,6 +20,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Field;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -149,7 +150,21 @@ public class StoredMap implements Map<String, Object>, Serializable {
         return getMapData().getSorter();
     }
 
-    public void sorter(Object sorter) {
+    public void sorter(String sorter) {
+        synchronized (_holder) {
+            MapData map = _getOrLoadForPersist();
+            map.putSorter(sorter);
+        }
+    }
+
+    public void sorter(Instant sorter) {
+        synchronized (_holder) {
+            MapData map = _getOrLoadForPersist();
+            map.putSorter(sorter);
+        }
+    }
+
+    public void sorter(Number sorter) {
         synchronized (_holder) {
             MapData map = _getOrLoadForPersist();
             map.putSorter(sorter);
