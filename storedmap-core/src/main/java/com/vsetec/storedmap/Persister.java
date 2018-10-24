@@ -162,7 +162,7 @@ public class Persister {
                         driver.unlock(key, indexName, connection);
                         holder.notify();
 
-                    }, mapData.getMap(), mapData.getLocales(), mapData.getSorter(), mapData.getTags(), () -> {
+                    }, mapData.getMap(), mapData.getLocales(), mapData.getSorterAsBytes(), mapData.getTags(), () -> {
                         // do nothing for now
                     });
                 }

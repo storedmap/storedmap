@@ -135,26 +135,24 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
     // sorting and filtering metadata
     public List<Locale> locales() {
-        return Collections.unmodifiableList(getMapData().getLocales());
+        return getMapData().getLocales();
     }
 
     public void locales(List<Locale> locales) {
         synchronized (_holder) {
             MapData map = _getOrLoadForPersist();
-            map.getLocales().clear();
-            map.getLocales().addAll(locales);
+            map.putLocales(locales);
         }
     }
 
-    public List<Byte> sorter() {
-        return Collections.unmodifiableList(getMapData().getSorter());
+    public Object sorter() {
+        return getMapData().getSorter();
     }
 
-    public void sorter(List<Byte> sorter) {
+    public void sorter(Object sorter) {
         synchronized (_holder) {
             MapData map = _getOrLoadForPersist();
-            map.getSorter().clear();
-            map.getSorter().addAll(sorter);
+            map.putSorter(sorter);
         }
     }
 
