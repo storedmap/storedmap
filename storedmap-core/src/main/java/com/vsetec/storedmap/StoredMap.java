@@ -20,11 +20,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Field;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -135,11 +133,11 @@ public class StoredMap implements Map<String, Object>, Serializable {
     }
 
     // sorting and filtering metadata
-    public List<Locale> locales() {
+    public Locale[] locales() {
         return getMapData().getLocales();
     }
 
-    public void locales(List<Locale> locales) {
+    public void locales(Locale[] locales) {
         synchronized (_holder) {
             MapData map = _getOrLoadForPersist();
             map.putLocales(locales);
@@ -150,36 +148,21 @@ public class StoredMap implements Map<String, Object>, Serializable {
         return getMapData().getSorter();
     }
 
-    public void sorter(String sorter) {
+    public void sorter(Object sorter) {
         synchronized (_holder) {
             MapData map = _getOrLoadForPersist();
             map.putSorter(sorter);
         }
     }
 
-    public void sorter(Instant sorter) {
-        synchronized (_holder) {
-            MapData map = _getOrLoadForPersist();
-            map.putSorter(sorter);
-        }
+    public String[] tags() {
+        return getMapData().getTags();
     }
 
-    public void sorter(Number sorter) {
+    public void tags(String[] tags) {
         synchronized (_holder) {
             MapData map = _getOrLoadForPersist();
-            map.putSorter(sorter);
-        }
-    }
-
-    public List<String> tags() {
-        return Collections.unmodifiableList(getMapData().getTags());
-    }
-
-    public void tags(List<String> tags) {
-        synchronized (_holder) {
-            MapData map = _getOrLoadForPersist();
-            map.getTags().clear();
-            map.getTags().addAll(tags);
+            map.putTags(tags);
         }
     }
 
