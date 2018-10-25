@@ -18,7 +18,6 @@ package com.vsetec.storedmap;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.text.CollationKey;
 import java.text.Collator;
@@ -40,7 +39,6 @@ import java.util.Objects;
 public class MapData implements Serializable {
 
     private static final RuleBasedCollator DEFAULTCOLLATOR;
-    private static final BigDecimal BIGGESTNUMBER;
 
     static {
         String rules = ((RuleBasedCollator) Collator.getInstance(new Locale("ru"))).getRules()
@@ -51,14 +49,6 @@ public class MapData implements Serializable {
         } catch (ParseException e) {
             throw new RuntimeException(e);
         }
-
-        char[] gaz = new char[196];
-        for (int i = 0; i < gaz.length; i++) {
-            gaz[i] = '9';
-        }
-        String gazStr = new String(gaz);
-        BigDecimal gazillion = new BigDecimal(gazStr);
-        BIGGESTNUMBER = gazillion.movePointLeft(98);
     }
 
     private final LinkedHashMap<String, Object> _map = new LinkedHashMap<>();
@@ -66,6 +56,11 @@ public class MapData implements Serializable {
     private final List<Byte> _sorterAsBytes = new ArrayList<>();
     private final Object[] _sorterAsObject = new Object[1];
     private final List<String> _tags = new ArrayList<>(4);
+    private final int _maximumSorterLength;
+
+    public MapData(int maximumSorterLength) {
+        this._maximumSorterLength = maximumSorterLength;
+    }
 
     LinkedHashMap<String, Object> getMap() {
         return _map;
@@ -125,24 +120,48 @@ public class MapData implements Serializable {
     }
 
     synchronized void putSorter(Number sorter) {
+
+        byte[] gazillionByteRepresentation = new byte[_maximumSorterLength - 1];
+        gazillionByteRepresentation[0] = Byte.MAX_VALUE;
+        for (int i = 1; i < gazillionByteRepresentation.length; i++) {
+            gazillionByteRepresentation[i] = -1;
+        } // making 7fffffffffffffffffffffff...
+        BigInteger biggestInteger = new BigInteger(gazillionByteRepresentation);
+
         Number number = (Number) sorter;
         BigDecimal bd = new BigDecimal(number.toString());  //123.456
-        if (bd.signum() > 1 && bd.compareTo(BIGGESTNUMBER) > 1) {
-            bd = BIGGESTNUMBER;                             //999.9999999
-        } else if (bd.signum() < 1 && bd.abs().compareTo(BIGGESTNUMBER) > 1) {
-            bd = BIGGESTNUMBER.negate();                    //-999.9999999
+        bd = bd.movePointRight(_maximumSorterLength / 2);     //123456000000. 
+        BigInteger bi = bd.toBigInteger();                  //123456000000 - discard everything after decimal point
+        if (bi.signum() > 1 && bi.compareTo(biggestInteger) > 1) { // ignore values too big
+            bi = biggestInteger;
+        } else if (bi.signum() < 1 && bi.abs().compareTo(biggestInteger) > 1) { // or too negative big
+            bi = biggestInteger.negate();
         }
 
-        bd = bd.add(BIGGESTNUMBER);                        // now it's always positive
-        bd = bd.movePointRight(98);
-        BigInteger bi = bd.toBigInteger();
+        bi = bi.add(biggestInteger);                        // now it's always positive
         byte[] bytes = bi.toByteArray();
-        Byte[] bytesB = new Byte[200];
-        for (int i = bytes.length - 1, y = bytesB.length - 1; i >= 0; i--, y--) {
+        byte[] bytesB = new byte[_maximumSorterLength];     // byte array of the desired length
+        int latestZero = _maximumSorterLength;
+        boolean metNonZero = false;
+        for (int i = bytes.length - 1, y = bytesB.length - 1; y >= 0; i--, y--) { // fill it from the end; leading zeroes will remain
             bytesB[y] = bytes[i];
+            // look for latest zero
+            if (!metNonZero) {
+                if (bytes[i] == 0) {
+                    latestZero = y;
+                } else {
+                    metNonZero = true;
+                }
+            }
         }
+        // crop the trailing zeroes (if we have some)
+        Byte[] bytesRet = new Byte[latestZero];
+        for (int i = 0; i < bytesRet.length; i++) {
+            bytesRet[i] = bytesB[i];
+        }
+
         _sorterAsBytes.clear();
-        _sorterAsBytes.addAll(Arrays.asList(bytesB));
+        _sorterAsBytes.addAll(Arrays.asList(bytesRet));
         _sorterAsObject[0] = sorter;
     }
 

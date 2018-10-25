@@ -126,7 +126,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
                 if (mapB != null) {
                     map = (MapData) Util.bytes2object(mapB);
                 } else {
-                    map = new MapData();
+                    map = new MapData(store.getDriver().getMaximumSorterLength());
                 }
                 _holder.put(map);
             }
