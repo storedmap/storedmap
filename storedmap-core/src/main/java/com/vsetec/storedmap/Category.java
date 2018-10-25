@@ -17,7 +17,12 @@ package com.vsetec.storedmap;
 
 import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -37,6 +42,7 @@ public class Category {
     private final Object _connection;
     private final String _name;
     private final String _indexName;
+    private final List<Locale>_locales = new ArrayList<>();
     private final WeakHashMap<String, WeakReference<WeakHolder>> _cache = new WeakHashMap<>();
 
     private Category() {
@@ -53,7 +59,35 @@ public class Category {
 
         String indexName = store.getApplicationCode() + "_" + name;
         _indexName = _translateIndexName(indexName);
+        
+        // get category locales
+        String appCode = _store.getApplicationCode();
+        String trAppCode;
+        if (!appCode.matches("^[a-z][a-z0-9]*$")) {
+            Base32 b = new Base32(true);
+            trAppCode = b.encodeAsString(appCode.getBytes(StandardCharsets.UTF_8));
+        } else {
+            trAppCode = appCode;
+        }
 
+        String localesIndexStorageName = trAppCode + "__locales";
+        
+        byte[]localesB = _driver.get(_indexName, localesIndexStorageName, _connection);
+        List<Locale>locales;
+        if(localesB!=null&&localesB.length>0){
+            locales = (List<Locale>) Util.bytes2object(localesB);
+            _locales.addAll(locales);
+        }
+    }
+    
+    public synchronized void setLocales(Locale[]locales){
+        _locales.clear();
+        _locales.addAll(Arrays.asList(locales));
+        // TODO: recollate all objects in this category =)
+    }
+
+    public Locale[] getLocales() {
+        return _locales.toArray(new Locale[_locales.size()]);
     }
 
     private String _translateIndexName(String notTranslated) {

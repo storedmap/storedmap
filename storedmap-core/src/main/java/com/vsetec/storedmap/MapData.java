@@ -52,8 +52,7 @@ public class MapData implements Serializable {
     }
 
     private final LinkedHashMap<String, Object> _map = new LinkedHashMap<>();
-    private final List<Locale> _locales = new ArrayList(3);
-    //private final List<Byte> _sorterAsBytes = new ArrayList<>();
+    //private final List<Locale> _locales = new ArrayList(3);
     private final Object[] _sorterObject = new Object[1];
     private final List<String> _tags = new ArrayList<>(4);
     private final int _maximumSorterLength;
@@ -75,15 +74,6 @@ public class MapData implements Serializable {
         return _tags.toArray(new String[_tags.size()]);//  _tags;
     }
 
-    synchronized void putLocales(Locale[] locales) {
-        _locales.clear();
-        _locales.addAll(Arrays.asList(locales));
-    }
-
-    Locale[] getLocales() {
-        return _locales.toArray(new Locale[_locales.size()]);//   Collections.unmodifiableList(_locales);
-    }
-
     void putSorter(Object sorter) {
         _sorterObject[0] = sorter;
     }
@@ -92,17 +82,17 @@ public class MapData implements Serializable {
         return _sorterObject[0];
     }
 
-    byte[] getSorterAsBytes() {
+    byte[] getSorterAsBytes(Locale[]locales) {
         if (_sorterObject[0] instanceof String) {
             String sorter = (String) _sorterObject[0];
             try {
 
                 Collator common;
-                if (_locales.isEmpty()) {
+                if (locales.length==0) {
                     common = DEFAULTCOLLATOR;
                 } else {
                     String rules = "";
-                    for (Locale locale : Collections.unmodifiableList(_locales)) {
+                    for (Locale locale : locales) {
                         RuleBasedCollator coll = (RuleBasedCollator) Collator.getInstance(locale);
                         rules = rules + coll.getRules();
                     }
@@ -173,7 +163,7 @@ public class MapData implements Serializable {
     public int hashCode() {
         int hash = 5;
         hash = 19 * hash + Objects.hashCode(this._map);
-        hash = 19 * hash + Objects.hashCode(this._locales);
+        //hash = 19 * hash + Objects.hashCode(this._locales);
         hash = 19 * hash + Objects.hashCode(this._sorterObject[0]);
         hash = 19 * hash + Objects.hashCode(this._tags);
         return hash;
@@ -194,9 +184,9 @@ public class MapData implements Serializable {
         if (!Objects.equals(this._map, other._map)) {
             return false;
         }
-        if (!Objects.equals(this._locales, other._locales)) {
-            return false;
-        }
+//        if (!Objects.equals(this._locales, other._locales)) {
+//            return false;
+//        }
         if (!Objects.equals(this._sorterObject[0], other._sorterObject[0])) {
             return false;
         }
