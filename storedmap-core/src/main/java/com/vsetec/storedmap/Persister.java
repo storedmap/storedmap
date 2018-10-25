@@ -164,7 +164,7 @@ public class Persister {
                             holder.notify();
                         }
 
-                    }, mapData.getMap(), category.getLocales(), mapData.getSorterAsBytes(category.getLocales()), mapData.getTags(), () -> {
+                    }, mapData.getMap(), category.getLocales(), mapData.getSorterAsBytes(category.getLocales(), driver.getMaximumSorterLength()), mapData.getTags(), () -> {
                         // do nothing for now
                     });
                 }

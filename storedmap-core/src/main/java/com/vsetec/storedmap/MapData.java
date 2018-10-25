@@ -55,10 +55,10 @@ public class MapData implements Serializable {
     //private final List<Locale> _locales = new ArrayList(3);
     private final Object[] _sorterObject = new Object[1];
     private final List<String> _tags = new ArrayList<>(4);
-    private final int _maximumSorterLength;
+    //private final int _maximumSorterLength;
 
-    public MapData(int maximumSorterLength) {
-        this._maximumSorterLength = maximumSorterLength;
+    public MapData() {
+        //this._maximumSorterLength = maximumSorterLength;
     }
 
     LinkedHashMap<String, Object> getMap() {
@@ -82,7 +82,7 @@ public class MapData implements Serializable {
         return _sorterObject[0];
     }
 
-    byte[] getSorterAsBytes(Locale[]locales) {
+    byte[] getSorterAsBytes(Locale[]locales, int maximumSorterLength) {
         if (_sorterObject[0] instanceof String) {
             String sorter = (String) _sorterObject[0];
             try {
@@ -117,7 +117,7 @@ public class MapData implements Serializable {
         } else if (_sorterObject[0] instanceof Number) {
             Number sorter = (Number) _sorterObject[0];
 
-            byte[] gazillionByteRepresentation = new byte[_maximumSorterLength - 1];
+            byte[] gazillionByteRepresentation = new byte[maximumSorterLength - 1];
             gazillionByteRepresentation[0] = Byte.MAX_VALUE;
             for (int i = 1; i < gazillionByteRepresentation.length; i++) {
                 gazillionByteRepresentation[i] = -1;
@@ -126,7 +126,7 @@ public class MapData implements Serializable {
 
             Number number = (Number) sorter;
             BigDecimal bd = new BigDecimal(number.toString());  //123.456
-            bd = bd.movePointRight(_maximumSorterLength / 2);     //123456000000. 
+            bd = bd.movePointRight(maximumSorterLength / 2);     //123456000000. 
             BigInteger bi = bd.toBigInteger();                  //123456000000 - discard everything after decimal point
             if (bi.signum() > 1 && bi.compareTo(biggestInteger) > 1) { // ignore values too big
                 bi = biggestInteger;
@@ -136,8 +136,8 @@ public class MapData implements Serializable {
 
             bi = bi.add(biggestInteger);                        // now it's always positive
             byte[] bytes = bi.toByteArray();
-            byte[] bytesB = new byte[_maximumSorterLength];     // byte array of the desired length
-            int latestZero = _maximumSorterLength;
+            byte[] bytesB = new byte[maximumSorterLength];     // byte array of the desired length
+            int latestZero = maximumSorterLength;
             boolean metNonZero = false;
             for (int i = bytes.length - 1, y = bytesB.length - 1; y >= 0; i--, y--) { // fill it from the end; leading zeroes will remain
                 bytesB[y] = bytes[i];
