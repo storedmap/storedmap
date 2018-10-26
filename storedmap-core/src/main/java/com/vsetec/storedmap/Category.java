@@ -19,7 +19,6 @@ import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -42,7 +41,7 @@ public class Category {
     private final Object _connection;
     private final String _name;
     private final String _indexName;
-    private final List<Locale>_locales = new ArrayList<>();
+    private final List<Locale> _locales = new ArrayList<>();
     private final WeakHashMap<String, WeakReference<WeakHolder>> _cache = new WeakHashMap<>();
 
     private Category() {
@@ -59,7 +58,7 @@ public class Category {
 
         String indexName = store.getApplicationCode() + "_" + name;
         _indexName = _translateIndexName(indexName);
-        
+
         // get category locales
         String appCode = _store.getApplicationCode();
         String trAppCode;
@@ -71,16 +70,16 @@ public class Category {
         }
 
         String localesIndexStorageName = trAppCode + "__locales";
-        
-        byte[]localesB = _driver.get(_indexName, localesIndexStorageName, _connection);
-        List<Locale>locales;
-        if(localesB!=null&&localesB.length>0){
+
+        byte[] localesB = _driver.get(_indexName, localesIndexStorageName, _connection);
+        List<Locale> locales;
+        if (localesB != null && localesB.length > 0) {
             locales = (List<Locale>) Util.bytes2object(localesB);
             _locales.addAll(locales);
         }
     }
-    
-    public synchronized void setLocales(Locale[]locales){
+
+    public synchronized void setLocales(Locale[] locales) {
         _locales.clear();
         _locales.addAll(Arrays.asList(locales));
         // TODO: recollate all objects in this category =)
@@ -145,7 +144,7 @@ public class Category {
                 indexIndex.put("id", indexId);
                 _driver.put(indexId, indexIndexStorageName, _connection, Util.object2bytes(indexIndex), () -> {
                     _driver.unlock(indexIdFinal, indexIndexStorageName, _connection);
-                }, null, null, null, null, null);
+                });
 
             }
             indexName = indexId;
@@ -192,7 +191,7 @@ public class Category {
     }
 
     public void remove(String key) {
-        synchronized(_cache){
+        synchronized (_cache) {
             _store.getDriver().remove(key, getIndexName(), key, null);
             _cache.remove(key);
         }

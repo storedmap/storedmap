@@ -103,7 +103,12 @@ public interface Driver {
             String indexName,
             Object connection,
             byte[] value,
-            Runnable callbackOnIndex,
+            Runnable callbackOnIndex);
+
+    void put(
+            String key,
+            String indexName,
+            Object connection,
             Map<String, Object> map,
             Locale[] locales,
             byte[] sorter,

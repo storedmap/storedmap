@@ -26,7 +26,6 @@ import java.text.RuleBasedCollator;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -82,13 +81,13 @@ public class MapData implements Serializable {
         return _sorterObject[0];
     }
 
-    byte[] getSorterAsBytes(Locale[]locales, int maximumSorterLength) {
+    byte[] getSorterAsBytes(Locale[] locales, int maximumSorterLength) {
         if (_sorterObject[0] instanceof String) {
             String sorter = (String) _sorterObject[0];
             try {
 
                 Collator common;
-                if (locales.length==0) {
+                if (locales.length == 0) {
                     common = DEFAULTCOLLATOR;
                 } else {
                     String rules = "";

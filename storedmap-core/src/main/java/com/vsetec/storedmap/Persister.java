@@ -17,6 +17,7 @@ package com.vsetec.storedmap;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -32,6 +33,7 @@ public class Persister {
     //private final Map<Thread, Set<MapData>> _storerThreads = new HashMap<>();
     private final Map<StoredMap, Thread> _threadsByStoredMap = new HashMap<>();
     private final Map<Thread, WaitAndPersist> _storerThreadForMainThread = new HashMap<>();
+    private final ExecutorService _additionalIndexer = Executors.newSingleThreadExecutor();
 
     public Persister(Store store) {
         _store = store;
@@ -156,16 +158,33 @@ public class Persister {
                     Driver driver = _store.getDriver();
                     Object connection = _store.getConnection();
                     String indexName = category.getIndexName();
-
+                    
+                    // data for additional index
+                    Map<String,Object>mapDataMap = mapData.getMap();
+                    byte[]sorter = mapData.getSorterAsBytes(category.getLocales(), driver.getMaximumSorterLength());
+                    String[]tags = mapData.getTags();
+                    
+                    
                     driver.put(key, indexName, connection, mapB, () -> {
 
-                        synchronized(holder){
+                        synchronized (holder) {
                             driver.unlock(key, indexName, connection);
                             holder.notify();
                         }
 
-                    }, mapData.getMap(), category.getLocales(), mapData.getSorterAsBytes(category.getLocales(), driver.getMaximumSorterLength()), mapData.getTags(), () -> {
-                        // do nothing for now
+                        _additionalIndexer.submit(() -> {
+                            driver.put(
+                                    key,
+                                    indexName,
+                                    connection,
+                                    mapDataMap,
+                                    category.getLocales(),
+                                    sorter,
+                                    tags, () -> {
+                                // do nothing for now
+                            });
+                        });
+
                     });
                 }
             }
