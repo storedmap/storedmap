@@ -17,6 +17,9 @@ package com.vsetec.storedmap;
 
 import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
+import java.text.Collator;
+import java.text.ParseException;
+import java.text.RuleBasedCollator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -36,12 +39,26 @@ import org.apache.commons.codec.binary.Base32;
  */
 public class Category {
 
+    private static final RuleBasedCollator DEFAULTCOLLATOR;
+
+    static {
+        String rules = ((RuleBasedCollator) Collator.getInstance(new Locale("ru"))).getRules()
+                + ((RuleBasedCollator) Collator.getInstance(Locale.US)).getRules()
+                + ((RuleBasedCollator) Collator.getInstance(Locale.PRC)).getRules();
+        try {
+            DEFAULTCOLLATOR = new RuleBasedCollator(rules);
+        } catch (ParseException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private final Store _store;
     private final Driver _driver;
     private final Object _connection;
     private final String _name;
     private final String _indexName;
     private final List<Locale> _locales = new ArrayList<>();
+    private RuleBasedCollator _collator;
     private final WeakHashMap<String, WeakReference<WeakHolder>> _cache = new WeakHashMap<>();
 
     private Category() {
@@ -60,28 +77,39 @@ public class Category {
         _indexName = _translateIndexName(indexName);
 
         // get category locales
-        String appCode = _store.getApplicationCode();
-        String trAppCode;
-        if (!appCode.matches("^[a-z][a-z0-9]*$")) {
-            Base32 b = new Base32(true);
-            trAppCode = b.encodeAsString(appCode.getBytes(StandardCharsets.UTF_8));
-        } else {
-            trAppCode = appCode;
-        }
-
-        String localesIndexStorageName = trAppCode + "__locales";
-
+        String localesIndexStorageName = _translate(_store.getApplicationCode()) + "__locales";
         byte[] localesB = _driver.get(_indexName, localesIndexStorageName, _connection);
-        List<Locale> locales;
+        Locale[] locales;
         if (localesB != null && localesB.length > 0) {
-            locales = (List<Locale>) Util.bytes2object(localesB);
-            _locales.addAll(locales);
+            locales = (Locale[]) Util.bytes2object(localesB);
+            setLocales(locales);
         }
     }
 
-    public synchronized void setLocales(Locale[] locales) {
+    public final synchronized void setLocales(Locale[] locales) {
         _locales.clear();
         _locales.addAll(Arrays.asList(locales));
+
+        byte[] localesB = Util.object2bytes(locales);
+        String localesIndexStorageName = _translate(_store.getApplicationCode()) + "__locales";
+        _driver.put(_indexName, localesIndexStorageName, _connection, localesB, () -> {
+        });
+
+        if (locales.length == 0) {
+            _collator = DEFAULTCOLLATOR;
+        } else {
+            String rules = "";
+            for (Locale locale : locales) {
+                RuleBasedCollator coll = (RuleBasedCollator) Collator.getInstance(locale);
+                rules = rules + coll.getRules();
+            }
+            try {
+                _collator = new RuleBasedCollator(rules);
+            } catch (ParseException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         // TODO: recollate all objects in this category =)
     }
 
@@ -89,25 +117,26 @@ public class Category {
         return _locales.toArray(new Locale[_locales.size()]);
     }
 
-    private String _translateIndexName(String notTranslated) {
-        String appCode = _store.getApplicationCode();
-        String trAppCode;
-        if (!appCode.matches("^[a-z][a-z0-9]*$")) {
-            Base32 b = new Base32(true);
-            trAppCode = b.encodeAsString(appCode.getBytes(StandardCharsets.UTF_8));
-        } else {
-            trAppCode = appCode;
-        }
+    public RuleBasedCollator getCollator() {
+        return _collator;
+    }
 
+    private String _translate(String string) {
+        String trString;
+        if (!string.matches("^[a-z][a-z0-9]*$")) {
+            Base32 b = new Base32(true);
+            trString = b.encodeAsString(string.getBytes(StandardCharsets.UTF_8));
+        } else {
+            trString = string;
+        }
+        return trString;
+    }
+
+    private String _translateIndexName(String notTranslated) {
+        String trAppCode = _translate(_store.getApplicationCode());
         String indexIndexStorageName = trAppCode + "__indices";
 
-        String trCatName;
-        if (!_name.matches("^[a-z][a-z0-9]*$")) {
-            Base32 b = new Base32(true);
-            trCatName = b.encodeAsString(_name.getBytes(StandardCharsets.UTF_8));
-        } else {
-            trCatName = _name;
-        }
+        String trCatName = _translate(_name);
 
         String indexName = trAppCode + "_" + trCatName;
         if (indexName.length() > _driver.getMaximumIndexNameLength()) {

@@ -158,13 +158,12 @@ public class Persister {
                     Driver driver = _store.getDriver();
                     Object connection = _store.getConnection();
                     String indexName = category.getIndexName();
-                    
+
                     // data for additional index
-                    Map<String,Object>mapDataMap = mapData.getMap();
-                    byte[]sorter = mapData.getSorterAsBytes(category.getLocales(), driver.getMaximumSorterLength());
-                    String[]tags = mapData.getTags();
-                    
-                    
+                    Map<String, Object> mapDataMap = mapData.getMap();
+                    byte[] sorter = mapData.getSorterAsBytes(category.getCollator(), driver.getMaximumSorterLength());
+                    String[] tags = mapData.getTags();
+
                     driver.put(key, indexName, connection, mapB, () -> {
 
                         synchronized (holder) {
@@ -181,8 +180,8 @@ public class Persister {
                                     category.getLocales(),
                                     sorter,
                                     tags, () -> {
-                                // do nothing for now
-                            });
+                                        // do nothing for now
+                                    });
                         });
 
                     });

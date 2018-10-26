@@ -21,14 +21,11 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.text.CollationKey;
 import java.text.Collator;
-import java.text.ParseException;
-import java.text.RuleBasedCollator;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 
 /**
@@ -36,19 +33,6 @@ import java.util.Objects;
  * @author Fyodor Kravchenko <fedd@vsetec.com>
  */
 public class MapData implements Serializable {
-
-    private static final RuleBasedCollator DEFAULTCOLLATOR;
-
-    static {
-        String rules = ((RuleBasedCollator) Collator.getInstance(new Locale("ru"))).getRules()
-                + ((RuleBasedCollator) Collator.getInstance(Locale.US)).getRules()
-                + ((RuleBasedCollator) Collator.getInstance(Locale.PRC)).getRules();
-        try {
-            DEFAULTCOLLATOR = new RuleBasedCollator(rules);
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     private final LinkedHashMap<String, Object> _map = new LinkedHashMap<>();
     //private final List<Locale> _locales = new ArrayList(3);
@@ -81,30 +65,12 @@ public class MapData implements Serializable {
         return _sorterObject[0];
     }
 
-    byte[] getSorterAsBytes(Locale[] locales, int maximumSorterLength) {
+    byte[] getSorterAsBytes(Collator collator, int maximumSorterLength) {
         if (_sorterObject[0] instanceof String) {
             String sorter = (String) _sorterObject[0];
-            try {
-
-                Collator common;
-                if (locales.length == 0) {
-                    common = DEFAULTCOLLATOR;
-                } else {
-                    String rules = "";
-                    for (Locale locale : locales) {
-                        RuleBasedCollator coll = (RuleBasedCollator) Collator.getInstance(locale);
-                        rules = rules + coll.getRules();
-                    }
-                    common = new RuleBasedCollator(rules);
-                }
-
-                CollationKey ck = common.getCollationKey(sorter);
-                byte[] arr = ck.toByteArray();
-                return arr;
-
-            } catch (ParseException e) {
-                throw new RuntimeException(e);
-            }
+            CollationKey ck = collator.getCollationKey(sorter);
+            byte[] arr = ck.toByteArray();
+            return arr;
         } else if (_sorterObject[0] instanceof Instant) {
             Instant sorter = (Instant) _sorterObject[0];
 
