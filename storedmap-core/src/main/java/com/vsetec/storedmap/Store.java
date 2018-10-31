@@ -126,6 +126,7 @@ public class Store implements Closeable {
 
     @Override
     public void close() {
+        _persister.stop();
         _driver.closeConnection(_connection);
     }
 

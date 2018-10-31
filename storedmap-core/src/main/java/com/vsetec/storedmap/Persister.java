@@ -19,7 +19,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.SerializationUtils;
 
 /**
@@ -28,17 +30,45 @@ import org.apache.commons.lang3.SerializationUtils;
  */
 public class Persister {
 
-    private final ThreadPoolExecutor _pool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
     private final Store _store;
     private final Map<WeakHolder, Thread> _threadsByStoredMap = new HashMap<>();
     private final ThreadLocal<WaitAndPersist> _storerThreadForMainThread = new ThreadLocal<>();
-    private final ExecutorService _additionalIndexer = Executors.newSingleThreadExecutor();
+    private final ThreadPoolExecutor _pool = (ThreadPoolExecutor) Executors.newCachedThreadPool(new ThreadFactory() {
+        private int _num = 1;
 
-    public Persister(Store store) {
+        @Override
+        public Thread newThread(Runnable r) {
+            _num++;
+            return new Thread(r, "MainIndexPersister-" + _num);
+        }
+    });
+    private final ExecutorService _additionalIndexer = Executors.newSingleThreadExecutor(new ThreadFactory() {
+        @Override
+        public Thread newThread(Runnable r) {
+            return new Thread(r, "AdditionalIndexPersister");
+        }
+    });
+
+    Persister(Store store) {
         _store = store;
     }
 
-    public Store getStore() {
+    void stop() {
+        _pool.shutdown();
+        try {
+            _pool.awaitTermination(3, TimeUnit.MINUTES);
+        } catch (InterruptedException e) {
+            throw new RuntimeException("Unexpected termination", e);
+        }
+        _additionalIndexer.shutdown();
+        try {
+            _additionalIndexer.awaitTermination(3, TimeUnit.MINUTES);
+        } catch (InterruptedException e) {
+            throw new RuntimeException("Unexpected termination", e);
+        }
+    }
+
+    Store getStore() {
         return _store;
     }
 
