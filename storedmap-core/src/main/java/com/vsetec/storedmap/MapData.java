@@ -64,7 +64,9 @@ public class MapData implements Serializable {
     }
 
     byte[] getSorterAsBytes(Collator collator, int maximumSorterLength) {
-        if (_sorterObject[0] instanceof String) {
+        if (_sorterObject[0] == null) {
+            return null;
+        } else if (_sorterObject[0] instanceof String) {
             String sorter = (String) _sorterObject[0];
             CollationKey ck = collator.getCollationKey(sorter);
             byte[] arr = ck.toByteArray();
@@ -117,8 +119,10 @@ public class MapData implements Serializable {
             byte[] bytesRet = new byte[latestZero];
             System.arraycopy(bytesB, 0, bytesRet, 0, latestZero);
             return bytesRet;
+        } else if (_sorterObject[0] instanceof Serializable) {
+            return SerializationUtils.serialize((Serializable) _sorterObject[0]);
         } else {
-            return SerializationUtils.serialize(_sorterObject);
+            return new byte[0];
         }
     }
 
