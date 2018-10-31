@@ -123,13 +123,15 @@ public class Category {
 
     private String _translate(String string) {
         String trString;
-        if (!string.matches("^[a-z][a-z0-9]*$")) {
-            Base32 b = new Base32(true);
+        if (!string.matches("^[a-z][a-z0-9_]*$")) {
+            Base32 b = new Base32(true, (byte)'*');
             trString = b.encodeAsString(string.getBytes(StandardCharsets.UTF_8));
+            // strip the hell the padding
+            trString = trString.substring(0, trString.indexOf("*"));
         } else {
             trString = string;
         }
-        return trString;
+        return trString.toLowerCase();
     }
 
     private String _translateIndexName(String notTranslated) {
