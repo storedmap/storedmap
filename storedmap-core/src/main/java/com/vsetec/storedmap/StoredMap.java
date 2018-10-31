@@ -27,11 +27,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
+import org.apache.commons.lang3.SerializationUtils;
 
 /**
  *
@@ -122,7 +122,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
                 Store store = _category.getStore();
                 byte[] mapB = store.getDriver().get(key, _category.getIndexName(), store.getConnection());
                 if (mapB != null) {
-                    map = (MapData) Util.bytes2object(mapB);
+                    map = (MapData) SerializationUtils.deserialize(mapB);
                 } else {
                     map = new MapData();
                 }
@@ -143,7 +143,6 @@ public class StoredMap implements Map<String, Object>, Serializable {
 //            map.putLocales(locales);
 //        }
 //    }
-
     public Object sorter() {
         return getMapData().getSorter();
     }

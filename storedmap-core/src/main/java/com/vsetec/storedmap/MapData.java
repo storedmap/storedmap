@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
+import org.apache.commons.lang3.SerializationUtils;
 
 /**
  *
@@ -35,13 +36,10 @@ import java.util.Objects;
 public class MapData implements Serializable {
 
     private final LinkedHashMap<String, Object> _map = new LinkedHashMap<>();
-    //private final List<Locale> _locales = new ArrayList(3);
     private final Object[] _sorterObject = new Object[1];
     private final List<String> _tags = new ArrayList<>(4);
-    //private final int _maximumSorterLength;
 
     public MapData() {
-        //this._maximumSorterLength = maximumSorterLength;
     }
 
     LinkedHashMap<String, Object> getMap() {
@@ -54,7 +52,7 @@ public class MapData implements Serializable {
     }
 
     String[] getTags() {
-        return _tags.toArray(new String[_tags.size()]);//  _tags;
+        return _tags.toArray(new String[_tags.size()]);
     }
 
     void putSorter(Object sorter) {
@@ -120,7 +118,7 @@ public class MapData implements Serializable {
             System.arraycopy(bytesB, 0, bytesRet, 0, latestZero);
             return bytesRet;
         } else {
-            return Util.object2bytes(_sorterObject); // has no sense as sorter byt still something
+            return SerializationUtils.serialize(_sorterObject);
         }
     }
 

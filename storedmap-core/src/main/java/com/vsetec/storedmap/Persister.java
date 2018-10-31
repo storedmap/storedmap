@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import org.apache.commons.lang3.SerializationUtils;
 
 /**
  *
@@ -29,10 +30,8 @@ public class Persister {
 
     private final ThreadPoolExecutor _pool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
     private final Store _store;
-    //private final Map<Thread, Set<MapData>> _toPersistByThread = new HashMap<>();
-    //private final Map<Thread, Set<MapData>> _storerThreads = new HashMap<>();
-    private final Map<StoredMap, Thread> _threadsByStoredMap = new HashMap<>();
-    private final Map<Thread, WaitAndPersist> _storerThreadForMainThread = new HashMap<>();
+    private final Map<WeakHolder, Thread> _threadsByStoredMap = new HashMap<>();
+    private final ThreadLocal<WaitAndPersist> _storerThreadForMainThread = new ThreadLocal<>();
     private final ExecutorService _additionalIndexer = Executors.newSingleThreadExecutor();
 
     public Persister(Store store) {
@@ -51,7 +50,10 @@ public class Persister {
         synchronized (holder) { // TODO: review the nested synchronized block
             while (true) {
                 // check if already scheduled for persist
-                Thread whereScheduled = _threadsByStoredMap.get(storedMap);
+                Thread whereScheduled;
+                synchronized (_threadsByStoredMap) {
+                    whereScheduled = _threadsByStoredMap.get(holder);
+                }
                 if (whereScheduled == null) { // no thread is working with this sm
 
                     {
@@ -67,16 +69,18 @@ public class Persister {
                     }
 
                     // mark that this thread is working with this map
-                    _threadsByStoredMap.put(storedMap, curThread);
+                    synchronized (_threadsByStoredMap) {
+                        _threadsByStoredMap.put(holder, curThread);
+                    }
 
                     // do we have a storer thread for this main thread?
-                    WaitAndPersist storerThreadRunnable = _storerThreadForMainThread.get(curThread);
-                    if (storerThreadRunnable == null) { // start a new thread
+                    WaitAndPersist storerThreadRunnable = _storerThreadForMainThread.get();
+                    if (storerThreadRunnable == null || storerThreadRunnable._finished) { // start a new thread
 
                         mapData = storedMap.getMapData();
-                        storerThreadRunnable = new WaitAndPersist(curThread);
+                        storerThreadRunnable = new WaitAndPersist();
                         storerThreadRunnable._mapDatas.put(holder, mapData);
-                        _storerThreadForMainThread.put(curThread, storerThreadRunnable);
+                        _storerThreadForMainThread.set(storerThreadRunnable);
 
                         _pool.execute(storerThreadRunnable);
 
@@ -92,6 +96,7 @@ public class Persister {
                             // notify the thread that it has to wait another N seconds
                             storerThreadRunnable._continueWaiting = true;
                             storerThreadRunnable.notify();
+
                         }
                     }
 
@@ -103,7 +108,7 @@ public class Persister {
                         throw new RuntimeException("Unexpected interruption", ex);
                     }
                 } else { // it was us! 
-                    WaitAndPersist storerThreadRunnable = _storerThreadForMainThread.get(curThread);
+                    WaitAndPersist storerThreadRunnable = _storerThreadForMainThread.get();
                     synchronized (storerThreadRunnable) {
                         if (storerThreadRunnable._tooLateToAddMapData) {
                             continue;
@@ -112,8 +117,8 @@ public class Persister {
                         storerThreadRunnable._mapDatas.put(holder, mapData);
                         storerThreadRunnable._continueWaiting = true;
                         storerThreadRunnable.notify();
+                        break;
                     }
-                    break;
                 }
             }
         }
@@ -124,13 +129,12 @@ public class Persister {
 
     private class WaitAndPersist implements Runnable {
 
-        private final Thread _mainThread;
         private final HashMap<WeakHolder, MapData> _mapDatas = new HashMap<>();
         private boolean _continueWaiting = true;
         private boolean _tooLateToAddMapData = false;
+        private boolean _finished = false;
 
-        WaitAndPersist(Thread mainThread) {
-            _mainThread = mainThread;
+        WaitAndPersist() {
         }
 
         @Override
@@ -145,7 +149,6 @@ public class Persister {
             }
 
             _tooLateToAddMapData = true;
-            _storerThreadForMainThread.remove(_mainThread);
 
             for (Map.Entry<WeakHolder, MapData> km : _mapDatas.entrySet()) {
                 WeakHolder holder = km.getKey();
@@ -154,7 +157,7 @@ public class Persister {
                 synchronized (holder) {
                     String key = holder.getKey();
                     Category category = holder.getCategory();
-                    byte[] mapB = Util.object2bytes(mapData);
+                    byte[] mapB = SerializationUtils.serialize(mapData);  // Util.object2bytes(mapData);
                     Driver driver = _store.getDriver();
                     Object connection = _store.getConnection();
                     String indexName = category.getIndexName();
@@ -167,6 +170,9 @@ public class Persister {
                     driver.put(key, indexName, connection, mapB, () -> {
 
                         synchronized (holder) {
+                            synchronized (_threadsByStoredMap) {
+                                _threadsByStoredMap.remove(holder);
+                            }
                             driver.unlock(key, indexName, connection);
                             holder.notify();
                         }
@@ -187,6 +193,8 @@ public class Persister {
                     });
                 }
             }
+
+            _finished = true;
 
         }
 

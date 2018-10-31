@@ -15,6 +15,7 @@
  */
 package com.vsetec.storedmap;
 
+import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
 import java.text.Collator;
@@ -30,6 +31,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import org.apache.commons.codec.binary.Base32;
+import org.apache.commons.lang3.SerializationUtils;
 
 /**
  * A database table or index representation
@@ -81,7 +83,7 @@ public class Category {
         byte[] localesB = _driver.get(_indexName, localesIndexStorageName, _connection);
         Locale[] locales;
         if (localesB != null && localesB.length > 0) {
-            locales = (Locale[]) Util.bytes2object(localesB);
+            locales = (Locale[]) SerializationUtils.deserialize(localesB);
             setLocales(locales);
         }
     }
@@ -90,7 +92,7 @@ public class Category {
         _locales.clear();
         _locales.addAll(Arrays.asList(locales));
 
-        byte[] localesB = Util.object2bytes(locales);
+        byte[] localesB = SerializationUtils.serialize(locales);
         String localesIndexStorageName = _translate(_store.getApplicationCode()) + "__locales";
         _driver.put(_indexName, localesIndexStorageName, _connection, localesB, () -> {
         });
@@ -124,7 +126,7 @@ public class Category {
     private String _translate(String string) {
         String trString;
         if (!string.matches("^[a-z][a-z0-9_]*$")) {
-            Base32 b = new Base32(true, (byte)'*');
+            Base32 b = new Base32(true, (byte) '*');
             trString = b.encodeAsString(string.getBytes(StandardCharsets.UTF_8));
             // strip the hell the padding
             trString = trString.substring(0, trString.indexOf("*"));
@@ -156,7 +158,7 @@ public class Category {
 
             for (String indexIndexKey : indexIndices) {
                 byte[] indexIndex = _driver.get(indexIndexKey, indexName, _connection);
-                Map<String, Object> indexIndexMap = (Map<String, Object>) Util.bytes2object(indexIndex);
+                Map<String, Object> indexIndexMap = (Map<String, Object>) SerializationUtils.deserialize(indexIndex);
                 if (notTranslated.equals(indexIndexMap.get("name"))) {
                     indexId = (String) indexIndexMap.get("id");
                     break;
@@ -173,7 +175,7 @@ public class Category {
                 Map<String, Object> indexIndex = new HashMap();
                 indexIndex.put("name", notTranslated);
                 indexIndex.put("id", indexId);
-                _driver.put(indexId, indexIndexStorageName, _connection, Util.object2bytes(indexIndex), () -> {
+                _driver.put(indexId, indexIndexStorageName, _connection, SerializationUtils.serialize((Serializable) indexIndex), () -> {
                     _driver.unlock(indexIdFinal, indexIndexStorageName, _connection);
                 });
 
