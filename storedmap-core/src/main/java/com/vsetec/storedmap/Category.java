@@ -225,7 +225,7 @@ public class Category {
 
     public void remove(String key) {
         synchronized (_cache) {
-            _store.getDriver().remove(key, getIndexName(), key, null);
+            _store.getDriver().remove(key, getIndexName(), _connection, null);
             _cache.remove(key);
         }
     }
