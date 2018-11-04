@@ -223,13 +223,6 @@ public class Category {
         return new StoredMaps(this, _driver.get(_indexName, _connection));
     }
 
-    public void remove(String key) {
-        synchronized (_cache) {
-            _store.getDriver().remove(key, getIndexName(), _connection, null);
-            _cache.remove(key);
-        }
-    }
-
     @Override
     public int hashCode() {
         int hash = 5;

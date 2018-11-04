@@ -48,6 +48,12 @@ public class Persister {
             return new Thread(r, "AdditionalIndexPersister");
         }
     });
+    private final ExecutorService _remover = Executors.newSingleThreadExecutor(new ThreadFactory() {
+        @Override
+        public Thread newThread(Runnable r) {
+            return new Thread(r, "IndexRemover");
+        }
+    });
 
     Persister(Store store) {
         _store = store;
@@ -66,13 +72,34 @@ public class Persister {
         } catch (InterruptedException e) {
             throw new RuntimeException("Unexpected termination", e);
         }
+        _remover.shutdown();
+        try {
+            _remover.awaitTermination(3, TimeUnit.MINUTES);
+        } catch (InterruptedException e) {
+            throw new RuntimeException("Unexpected termination", e);
+        }
     }
 
     Store getStore() {
         return _store;
     }
 
-    MapData scheduleForPersist(StoredMap storedMap) {
+//    void scheduleForRemove(StoredMap storedMap){
+//        
+//        // TODO: put in the same virtual queue as persisting (see below)
+//        
+//        WeakHolder holder = storedMap.holder();
+//        synchronized(holder){
+//            _remover.submit(() -> {
+//                synchronized(holder){
+//                    _store.getDriver().remove(holder.getKey(), storedMap.category().getIndexName(), _store.getConnection(), () -> {
+//                        System.out.println("Callback of removal or " + holder.getKey());
+//                    });
+//                }
+//            });
+//        }
+//    }
+    MapData scheduleForPersist(StoredMap storedMap, boolean actuallyRemove) {
         Thread curThread = Thread.currentThread();
         WeakHolder holder = storedMap.holder();
         final MapData mapData;
@@ -108,6 +135,7 @@ public class Persister {
                     if (storerThreadRunnable == null || storerThreadRunnable._finished) { // start a new thread
 
                         mapData = storedMap.getMapData();
+                        mapData.setScheduledForDelete(actuallyRemove);
                         storerThreadRunnable = new WaitAndPersist();
                         storerThreadRunnable._mapDatas.put(holder, mapData);
                         _storerThreadForMainThread.set(storerThreadRunnable);
@@ -122,6 +150,7 @@ public class Persister {
                             }
 
                             mapData = storedMap.getMapData();
+                            mapData.setScheduledForDelete(actuallyRemove);
                             storerThreadRunnable._mapDatas.put(holder, mapData);
                             // notify the thread that it has to wait another N seconds
                             storerThreadRunnable._continueWaiting = true;
@@ -144,6 +173,7 @@ public class Persister {
                             continue;
                         }
                         mapData = storedMap.getMapData();
+                        mapData.setScheduledForDelete(actuallyRemove);
                         storerThreadRunnable._mapDatas.put(holder, mapData);
                         storerThreadRunnable._continueWaiting = true;
                         storerThreadRunnable.notify();
@@ -187,40 +217,54 @@ public class Persister {
                 synchronized (holder) {
                     String key = holder.getKey();
                     Category category = holder.getCategory();
-                    byte[] mapB = SerializationUtils.serialize(mapData);  // Util.object2bytes(mapData);
-                    Driver driver = _store.getDriver();
-                    Object connection = _store.getConnection();
-                    String indexName = category.getIndexName();
 
-                    // data for additional index
-                    Map<String, Object> mapDataMap = mapData.getMap();
-                    byte[] sorter = mapData.getSorterAsBytes(category.getCollator(), driver.getMaximumSorterLength());
-                    String[] tags = mapData.getTags();
+                    if (mapData.isScheduledForDelete()) {
 
-                    driver.put(key, indexName, connection, mapB, () -> {
-
-                        synchronized (holder) {
-                            synchronized (_threadsByStoredMap) {
-                                _threadsByStoredMap.remove(holder);
+                        _remover.submit(() -> {
+                            synchronized (holder) {
+                                _store.getDriver().remove(key, category.getIndexName(), _store.getConnection(), () -> {
+                                    System.out.println("Callback of removal or " + holder.getKey());
+                                });
                             }
-                            driver.unlock(key, indexName, connection);
-                            holder.notify();
-                        }
-
-                        _additionalIndexer.submit(() -> {
-                            driver.put(
-                                    key,
-                                    indexName,
-                                    connection,
-                                    mapDataMap,
-                                    category.getLocales(),
-                                    sorter,
-                                    tags, () -> {
-                                        // do nothing for now
-                                    });
                         });
 
-                    });
+                    } else {
+
+                        byte[] mapB = SerializationUtils.serialize(mapData);  // Util.object2bytes(mapData);
+                        Driver driver = _store.getDriver();
+                        Object connection = _store.getConnection();
+                        String indexName = category.getIndexName();
+
+                        // data for additional index
+                        Map<String, Object> mapDataMap = mapData.getMap();
+                        byte[] sorter = mapData.getSorterAsBytes(category.getCollator(), driver.getMaximumSorterLength());
+                        String[] tags = mapData.getTags();
+
+                        driver.put(key, indexName, connection, mapB, () -> {
+
+                            synchronized (holder) {
+                                synchronized (_threadsByStoredMap) {
+                                    _threadsByStoredMap.remove(holder);
+                                }
+                                driver.unlock(key, indexName, connection);
+                                holder.notify();
+                            }
+
+                            _additionalIndexer.submit(() -> {
+                                driver.put(
+                                        key,
+                                        indexName,
+                                        connection,
+                                        mapDataMap,
+                                        category.getLocales(),
+                                        sorter,
+                                        tags, () -> {
+                                            // do nothing for now
+                                        });
+                            });
+
+                        });
+                    }
                 }
             }
 

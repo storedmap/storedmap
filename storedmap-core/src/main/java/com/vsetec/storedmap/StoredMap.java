@@ -110,8 +110,15 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
     private MapData _getOrLoadForPersist() {
 
-        return _category.getStore().getPersister().scheduleForPersist(this);
+        return _category.getStore().getPersister().scheduleForPersist(this, false);
 
+    }
+    
+    public void remove(){
+        
+        synchronized(_holder){
+            _category.getStore().getPersister().scheduleForPersist(this, true);
+        }
     }
 
     MapData getMapData() {

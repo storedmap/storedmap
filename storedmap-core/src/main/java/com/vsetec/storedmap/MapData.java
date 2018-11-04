@@ -38,8 +38,17 @@ public class MapData implements Serializable {
     private final LinkedHashMap<String, Object> _map = new LinkedHashMap<>();
     private final Object[] _sorterObject = new Object[1];
     private final List<String> _tags = new ArrayList<>(4);
+    private transient boolean _scheduledForDelete = false;
 
     public MapData() {
+    }
+
+    public boolean isScheduledForDelete() {
+        return _scheduledForDelete;
+    }
+
+    public void setScheduledForDelete(boolean scheduledForDelete) {
+        _scheduledForDelete = scheduledForDelete;
     }
 
     LinkedHashMap<String, Object> getMap() {
