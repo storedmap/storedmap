@@ -19,12 +19,10 @@ package com.vsetec.storedmap;
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
  */
-public class StoredMapException extends RuntimeException{
+public class StoredMapException extends RuntimeException {
 
     public StoredMapException(String message, Throwable exception) {
         super(message, exception);
     }
-    
-    
-    
+
 }

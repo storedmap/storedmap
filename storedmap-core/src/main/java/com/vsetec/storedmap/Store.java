@@ -89,7 +89,7 @@ public class Store implements Closeable {
     }
 
     private final Map<String, Category> _categories = new HashMap<>();
-    
+
     private final String _appCode;
     private final Driver _driver;
     private final String _driverClassName;

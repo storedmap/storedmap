@@ -22,20 +22,20 @@ import java.util.Iterator;
  * @author Fyodor Kravchenko <fedd@vsetec.com>
  */
 public class StoredMaps implements Iterable<StoredMap> {
-    
-    private final Iterable<String>_iterable;
+
+    private final Iterable<String> _iterable;
     private final Category _category;
-    
-    StoredMaps(Category category, Iterable<String> iterable){
+
+    StoredMaps(Category category, Iterable<String> iterable) {
         _iterable = iterable;
         _category = category;
     }
 
     @Override
     public Iterator<StoredMap> iterator() {
-        
-        Iterator<String>i = _iterable.iterator();
-        
+
+        Iterator<String> i = _iterable.iterator();
+
         return new Iterator<StoredMap>() {
             @Override
             public boolean hasNext() {
@@ -48,7 +48,7 @@ public class StoredMaps implements Iterable<StoredMap> {
                 return _category.get(nextKey);
             }
         };
-                
+
     }
-    
+
 }
