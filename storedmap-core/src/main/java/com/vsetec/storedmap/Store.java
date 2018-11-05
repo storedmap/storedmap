@@ -97,6 +97,7 @@ public class Store implements Closeable {
     private final String _connectionString;
     private final Properties _properties;
     private final Persister _persister = new Persister(this);
+    private final int _hash;
 
     private Store() {
         throw new UnsupportedOperationException();
@@ -122,6 +123,13 @@ public class Store implements Closeable {
         } catch (Exception e) {
             throw new StoredMapException("Couldn't connect to the underlying storage with connection " + connectionString, e);
         }
+
+        int hash = 7;
+        hash = 19 * hash + Objects.hashCode(this._appCode);
+        hash = 19 * hash + Objects.hashCode(this._driverClassName);
+        hash = 19 * hash + Objects.hashCode(this._connectionString);
+        hash = 19 * hash + Objects.hashCode(this._properties);
+        _hash = hash;
     }
 
     @Override
@@ -165,12 +173,7 @@ public class Store implements Closeable {
 
     @Override
     public int hashCode() {
-        int hash = 7;
-        hash = 19 * hash + Objects.hashCode(this._appCode);
-        hash = 19 * hash + Objects.hashCode(this._driverClassName);
-        hash = 19 * hash + Objects.hashCode(this._connectionString);
-        hash = 19 * hash + Objects.hashCode(this._properties);
-        return hash;
+        return _hash;
     }
 
     @Override

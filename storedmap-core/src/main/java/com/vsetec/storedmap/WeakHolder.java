@@ -27,10 +27,15 @@ public class WeakHolder {
     private final String _key;
     private final Category _category;
     private WeakReference<MapData> _wr = new WeakReference<>(null);
+    private final int _hash;
 
     WeakHolder(String key, Category category) {
         _key = key;
         _category = category;
+        int hash = 3;
+        hash = 89 * hash + Objects.hashCode(this._key);
+        hash = 89 * hash + Objects.hashCode(this._category);
+        _hash = hash;
     }
 
     String getKey() {
@@ -62,10 +67,7 @@ public class WeakHolder {
 
     @Override
     public int hashCode() {
-        int hash = 3;
-        hash = 89 * hash + Objects.hashCode(this._key);
-        hash = 89 * hash + Objects.hashCode(this._category);
-        return hash;
+        return _hash;
     }
 
     @Override

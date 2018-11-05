@@ -139,7 +139,6 @@ public class MapData implements Serializable {
     public int hashCode() {
         int hash = 5;
         hash = 19 * hash + Objects.hashCode(this._map);
-        //hash = 19 * hash + Objects.hashCode(this._locales);
         hash = 19 * hash + Objects.hashCode(this._sorterObject[0]);
         hash = 19 * hash + Objects.hashCode(this._tags);
         return hash;

@@ -62,6 +62,7 @@ public class Category {
     private final List<Locale> _locales = new ArrayList<>();
     private RuleBasedCollator _collator;
     private final WeakHashMap<String, WeakReference<WeakHolder>> _cache = new WeakHashMap<>();
+    private final int _hash;
 
     private Category() {
         throw new UnsupportedOperationException();
@@ -72,6 +73,12 @@ public class Category {
         _name = name;
         _store = store;
 
+        int hash = 5;
+        hash = 53 * hash + Objects.hashCode(this._store);
+        hash = 53 * hash + Objects.hashCode(this._name);
+        _hash = hash;
+        
+        
         _connection = store.getConnection();
         _driver = store.getDriver();
 
@@ -225,10 +232,7 @@ public class Category {
 
     @Override
     public int hashCode() {
-        int hash = 5;
-        hash = 53 * hash + Objects.hashCode(this._store);
-        hash = 53 * hash + Objects.hashCode(this._name);
-        return hash;
+        return _hash;
     }
 
     @Override

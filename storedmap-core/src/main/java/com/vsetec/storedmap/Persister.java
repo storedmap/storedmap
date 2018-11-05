@@ -143,11 +143,12 @@ public class Persister {
                         _pool.execute(storerThreadRunnable);
 
                     } else {
-                        synchronized (storerThreadRunnable) {
 
-                            if (storerThreadRunnable._tooLateToAddMapData) {
-                                continue;
-                            }
+                        if (storerThreadRunnable._tooLateToAddMapData) {
+                            continue;
+                        }
+
+                        synchronized (storerThreadRunnable) {
 
                             mapData = storedMap.getMapData();
                             mapData.setScheduledForDelete(actuallyRemove);
@@ -168,10 +169,10 @@ public class Persister {
                     }
                 } else { // it was us! 
                     WaitAndPersist storerThreadRunnable = _storerThreadForMainThread.get();
+                    if (storerThreadRunnable._tooLateToAddMapData) {
+                        continue;
+                    }
                     synchronized (storerThreadRunnable) {
-                        if (storerThreadRunnable._tooLateToAddMapData) {
-                            continue;
-                        }
                         mapData = storedMap.getMapData();
                         mapData.setScheduledForDelete(actuallyRemove);
                         storerThreadRunnable._mapDatas.put(holder, mapData);

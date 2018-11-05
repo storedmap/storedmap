@@ -43,15 +43,15 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
     private final Category _category;
     private final WeakHolder _holder;
-//    private byte[] _sorter = null;
-//    private boolean _sorterLoaded = false;
-//    private String[] _tags = null;
-//    private boolean _tagsLoaded = false;
+    private final int _hash;
 
     StoredMap(Category category, WeakHolder holder) {
         _category = category;
         _holder = holder;
-        //holder.setStoredMap(this);
+        int hash = 7;
+        hash = 19 * hash + Objects.hashCode(this._category);
+        hash = 19 * hash + Objects.hashCode(this._holder);
+        _hash = hash;
     }
 
     public Category category() {
@@ -113,10 +113,10 @@ public class StoredMap implements Map<String, Object>, Serializable {
         return _category.getStore().getPersister().scheduleForPersist(this, false);
 
     }
-    
-    public void remove(){
-        
-        synchronized(_holder){
+
+    public void remove() {
+
+        synchronized (_holder) {
             _category.getStore().getPersister().scheduleForPersist(this, true);
         }
     }
@@ -140,16 +140,6 @@ public class StoredMap implements Map<String, Object>, Serializable {
     }
 
     // sorting and filtering metadata
-//    public Locale[] locales() {
-//        return getMapData().getLocales();
-//    }
-//
-//    public void locales(Locale[] locales) {
-//        synchronized (_holder) {
-//            MapData map = _getOrLoadForPersist();
-//            map.putLocales(locales);
-//        }
-//    }
     public Object sorter() {
         return getMapData().getSorter();
     }
@@ -1238,10 +1228,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
     @Override
     public int hashCode() {
-        int hash = 7;
-        hash = 19 * hash + Objects.hashCode(this._category);
-        hash = 19 * hash + Objects.hashCode(this._holder);
-        return hash;
+        return _hash;
     }
 
     @Override
