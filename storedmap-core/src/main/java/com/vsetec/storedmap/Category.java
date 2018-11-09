@@ -77,8 +77,7 @@ public class Category {
         hash = 53 * hash + Objects.hashCode(this._store);
         hash = 53 * hash + Objects.hashCode(this._name);
         _hash = hash;
-        
-        
+
         _connection = store.getConnection();
         _driver = store.getDriver();
 
