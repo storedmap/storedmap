@@ -70,6 +70,10 @@ public class Persister {
         }
     }
 
+    boolean isInWork(StoredMap storedMap) {
+        return _inWork.contains(storedMap);
+    }
+
     MapData scheduleForPersist(StoredMap storedMap) {
         WeakHolder holder = storedMap.holder();
         synchronized (holder) {
