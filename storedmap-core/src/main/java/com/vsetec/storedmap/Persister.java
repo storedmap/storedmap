@@ -88,13 +88,12 @@ public class Persister {
                 }
             }
 
+            MapData mapData = storedMap.getMapData();
             if (storedMap.isRemoved) {
-                return null;
+                return mapData;
             }
-
             String key = holder.getKey();
             Category category = holder.getCategory();
-            MapData mapData = storedMap.getMapData();
 
             ScheduledFuture newCommand = _mainIndexer.schedule(() -> {
 
