@@ -147,6 +147,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
     public void sorter(Object sorter) {
         synchronized (_holder) {
             MapData map = _getOrLoadForPersist();
+            //System.out.println("putting sorter: " + sorter.toString() + " for key " + _holder.getKey());
             map.putSorter(sorter);
         }
     }
@@ -195,6 +196,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
             MapData map = _getOrLoadForPersist();
             Object ret = map.getMap().put(key, value);
             //_persist(map);
+            //System.out.println("putting for key: " + _holder.getKey() + ", something with key " + key + ", value - " + value.toString());
             return ret;
         }
     }

@@ -184,6 +184,8 @@ public class Persister {
             }
         }
 
+        //System.out.println("loaded for persist: " + holder.getKey() +", there was sorter " + mapData.getSorter() + " and map " + mapData.getMap());
+        
         return mapData;
 
     }
@@ -224,7 +226,7 @@ public class Persister {
                         _remover.submit(() -> {
                             synchronized (holder) {
                                 _store.getDriver().remove(key, category.getIndexName(), _store.getConnection(), () -> {
-                                    System.out.println("Callback of removal or " + holder.getKey());
+                                    //System.out.println("Callback of removal or " + holder.getKey());
                                 });
                             }
                         });
