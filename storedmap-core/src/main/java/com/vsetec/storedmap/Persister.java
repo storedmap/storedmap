@@ -20,7 +20,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.SerializationUtils;
@@ -32,14 +31,7 @@ import org.apache.commons.lang3.SerializationUtils;
 public class Persister {
 
     private final Store _store;
-    private final ConcurrentHashMap<WeakHolder, ScheduledFuture> _inWork = new ConcurrentHashMap<>();
-    //private final ThreadLocal<Boolean>_lockedInThisThread = new ThreadLocal(){
-    //   @Override
-    //    protected Object initialValue() {
-    //        return false;
-    //    }
-    //    
-    //};
+    private final ConcurrentHashMap<WeakHolder, SaveOrReschedule> _inWork = new ConcurrentHashMap<>();
     private final ScheduledExecutorService _mainIndexer = Executors.newScheduledThreadPool(5, new ThreadFactory() {
         private int _num = 0;
 
@@ -56,6 +48,15 @@ public class Persister {
     }
 
     void stop() {
+        
+        while(!_inWork.isEmpty()){
+            try{
+                Thread.currentThread().sleep(100);
+            }catch(InterruptedException e){
+                
+            }
+        }
+        
         _mainIndexer.shutdown();
         try {
             _mainIndexer.awaitTermination(3, TimeUnit.MINUTES);
@@ -70,16 +71,17 @@ public class Persister {
         }
     }
 
-    boolean isInWork(StoredMap storedMap) {
-        return _inWork.contains(storedMap);
+    boolean isInWork(WeakHolder holder) {
+        return _inWork.contains(holder);
     }
 
     MapData scheduleForPersist(StoredMap storedMap) {
         WeakHolder holder = storedMap.holder();
         synchronized (holder) {
-            ScheduledFuture oldCommand = _inWork.remove(holder);
-            if (oldCommand != null) {
-                oldCommand.cancel(false);
+            SaveOrReschedule command = _inWork.get(holder);
+            if (command != null) {
+                command._reschedule = true;
+                return command._mapData;
             } else {
                 long waitForLock;
                 // wait for releasing on other machines then lock for ourselves
@@ -90,56 +92,81 @@ public class Persister {
                         throw new RuntimeException("Unexpected interruption", ex);
                     }
                 }
-            }
 
-            MapData mapData = storedMap.getMapData();
-            if (storedMap.isRemoved) {
+                MapData mapData = storedMap.getMapData();
+                if (storedMap.isRemoved) {
+                    return mapData;
+                }
+                command = new SaveOrReschedule(storedMap, mapData);
+                _inWork.put(holder, command);
+                _mainIndexer.schedule(command, 3, TimeUnit.SECONDS);
                 return mapData;
             }
-            String key = holder.getKey();
-            Category category = holder.getCategory();
+        }
+    }
 
-            ScheduledFuture newCommand = _mainIndexer.schedule(() -> {
+    private class SaveOrReschedule implements Runnable {
 
-                synchronized (holder) {
-                    byte[] mapB = SerializationUtils.serialize(mapData);
-                    Driver driver = _store.getDriver();
-                    Object connection = _store.getConnection();
-                    String indexName = category.getIndexName();
+        private boolean _reschedule = false;
+        private final StoredMap _sm;
+        private final WeakHolder _holder;
+        private final MapData _mapData;
 
-                    // data for additional index
-                    Map<String, Object> mapDataMap = mapData.getMap();
-                    byte[] sorter = mapData.getSorterAsBytes(category.getCollator(), driver.getMaximumSorterLength());
-                    String[] tags = mapData.getTags();
+        public SaveOrReschedule(StoredMap sm, MapData md) {
+            _sm = sm;
+            _mapData = md;
+            _holder = sm.holder();
+        }
 
-                    driver.put(key, indexName, connection, mapB, () -> {
+        @Override
+        public void run() {
 
-                        _additionalIndexer.submit(() -> {
-                            driver.put(
-                                    key,
-                                    indexName,
-                                    connection,
-                                    mapDataMap,
-                                    category.getLocales(),
-                                    sorter,
-                                    tags, () -> {
-                                        synchronized (holder) {
-                                            driver.unlock(key, indexName, connection);
-                                            holder.notify();
-                                        }
-                                    });
+            synchronized (_holder) {
 
-                        });
+                if (_reschedule) {
+                    _reschedule = false;
+                    _mainIndexer.schedule(this, 2, TimeUnit.SECONDS);
+                    return;
+                }
+
+                Category category = _sm.category();
+
+                byte[] mapB = SerializationUtils.serialize(_mapData);
+                Driver driver = _store.getDriver();
+                Object connection = _store.getConnection();
+                String indexName = category.getIndexName();
+
+                // data for additional index
+                Map<String, Object> mapDataMap = _mapData.getMap();
+                byte[] sorter = _mapData.getSorterAsBytes(category.getCollator(), driver.getMaximumSorterLength());
+                String[] tags = _mapData.getTags();
+
+                driver.put(_holder.getKey(), indexName, connection, mapB, () -> {
+
+                    _additionalIndexer.submit(() -> {
+                        driver.put(
+                                _holder.getKey(),
+                                indexName,
+                                connection,
+                                mapDataMap,
+                                category.getLocales(),
+                                sorter,
+                                tags, () -> {
+                                    synchronized (_holder) {
+                                        driver.unlock(_holder.getKey(), indexName, connection);
+                                        _holder.notify();
+                                    }
+                                });
 
                     });
 
-                }
+                });
 
-                _inWork.remove(holder);
-            }, 3, TimeUnit.SECONDS);
-            _inWork.put(holder, newCommand);
-            return mapData;
+                _inWork.remove(_holder);
+            }
+
         }
+
     }
 
 }
