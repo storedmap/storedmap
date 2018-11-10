@@ -44,6 +44,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
     private final Category _category;
     private final WeakHolder _holder;
     private final int _hash;
+    transient boolean isRemoved = false;
 
     StoredMap(Category category, WeakHolder holder) {
         _category = category;
@@ -110,14 +111,41 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
     private MapData _getOrLoadForPersist() {
 
-        return _category.getStore().getPersister().scheduleForPersist(this, false);
+        return _category.getStore().getPersister().scheduleForPersist(this);
 
     }
 
     public void remove() {
-
+        // immediate remove
         synchronized (_holder) {
-            _category.getStore().getPersister().scheduleForPersist(this, true);
+            Store store = _category.getStore();
+            Driver driver = store.getDriver();
+
+            {
+                long waitForLock;
+                // wait for releasing on other machines then lock for ourselves
+                while ((waitForLock = driver.tryLock(_holder.getKey(), _category.getIndexName(), store.getConnection(), 100000)) > 0) {
+                    try {
+                        _holder.wait(waitForLock > 5000 ? 2000 : waitForLock); // check every 2 seconds
+                    } catch (InterruptedException ex) {
+                        throw new RuntimeException("Unexpected interruption", ex);
+                    }
+                }
+            }
+
+            isRemoved = true;
+
+            _category.removeFromCache(_holder.getKey());
+            driver.remove(_holder.getKey(), _category.getIndexName(), store.getConnection(), new Runnable() {
+                @Override
+                public void run() {
+                    synchronized (_holder) {
+                        driver.unlock(_holder.getKey(), _category.getIndexName(), store.getConnection());
+                        _holder.notify();
+                    }
+                }
+            });
+
         }
     }
 

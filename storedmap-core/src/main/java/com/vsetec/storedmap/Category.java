@@ -225,6 +225,12 @@ public class Category {
         return ret;
     }
 
+    void removeFromCache(String key) {
+        synchronized (_cache) {
+            _cache.remove(key);
+        }
+    }
+
     public StoredMaps get() {
         return new StoredMaps(this, _driver.get(_indexName, _connection));
     }
