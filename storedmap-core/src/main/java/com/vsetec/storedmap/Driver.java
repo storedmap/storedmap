@@ -23,11 +23,11 @@ import java.util.Properties;
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
  */
-public interface Driver {
+public interface Driver<T> {
 
-    Object openConnection(String connectionString, Properties properties);
+    T openConnection(String connectionString, Properties properties);
 
-    void closeConnection(Object connection);
+    void closeConnection(T connection);
 
     int getMaximumIndexNameLength();
 
@@ -37,23 +37,23 @@ public interface Driver {
 
     int getMaximumSorterLength();
 
-    byte[] get(String key, String indexName, Object connection);
+    byte[] get(String key, String indexName, T connection);
 
-    Iterable<String> get(String indexName, Object connection);
+    Iterable<String> get(String indexName, T connection);
 
-    Iterable<String> get(String indexName, Object connection, String[] anyOfTags);
+    Iterable<String> get(String indexName, T connection, String[] anyOfTags);
 
-    Iterable<String> get(String indexName, Object connection, byte[] minSorter, byte[] maxSorter, boolean ascending);
+    Iterable<String> get(String indexName, T connection, byte[] minSorter, byte[] maxSorter, boolean ascending);
 
-    Iterable<String> get(String indexName, Object connection, String textQuery);
+    Iterable<String> get(String indexName, T connection, String textQuery);
 
-    Iterable<String> get(String indexName, Object connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending);
+    Iterable<String> get(String indexName, T connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending);
 
-    Iterable<String> get(String indexName, Object connection, String textQuery, String[] anyOfTags);
+    Iterable<String> get(String indexName, T connection, String textQuery, String[] anyOfTags);
 
-    Iterable<String> get(String indexName, Object connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending);
+    Iterable<String> get(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending);
 
-    Iterable<String> get(String indexName, Object connection, String textQuery, byte[] minSorter, byte[] maxSorter, boolean ascending);
+    Iterable<String> get(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter, boolean ascending);
 
     /**
      * Tries to lock the key in a specified index or returns the value
@@ -82,7 +82,7 @@ public interface Driver {
      * before it will be automatically considered to be released
      * @return
      */
-    int tryLock(String key, String indexName, Object connection, int milliseconds);
+    int tryLock(String key, String indexName, T connection, int milliseconds);
 
     /**
      * Unlock the key in the specified index.
@@ -96,25 +96,25 @@ public interface Driver {
      * @param indexName
      * @param connection
      */
-    void unlock(String key, String indexName, Object connection);
+    void unlock(String key, String indexName, T connection);
 
     void put(
             String key,
             String indexName,
-            Object connection,
+            T connection,
             byte[] value,
             Runnable callbackOnIndex);
 
     void put(
             String key,
             String indexName,
-            Object connection,
+            T connection,
             Map<String, Object> map,
             Locale[] locales,
             byte[] sorter,
             String[] tags,
             Runnable callbackOnAdditionalIndex);
 
-    void remove(String key, String indexName, Object connection, Runnable callback);
+    void remove(String key, String indexName, T connection, Runnable callback);
 
 }
