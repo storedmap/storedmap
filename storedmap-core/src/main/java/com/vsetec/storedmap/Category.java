@@ -15,7 +15,6 @@
  */
 package com.vsetec.storedmap;
 
-import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
 import java.text.Collator;
@@ -23,10 +22,8 @@ import java.text.ParseException;
 import java.text.RuleBasedCollator;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.WeakHashMap;
@@ -135,7 +132,10 @@ public class Category {
             Base32 b = new Base32(true, (byte) '*');
             trString = b.encodeAsString(string.getBytes(StandardCharsets.UTF_8));
             // strip the hell the padding
-            trString = trString.substring(0, trString.indexOf("*"));
+            int starPos = trString.indexOf("*");
+            if (starPos > 0) {
+                trString = trString.substring(0, starPos);
+            }
         } else {
             trString = string;
         }
@@ -151,42 +151,37 @@ public class Category {
         String indexName = trAppCode + "_" + trCatName;
         if (indexName.length() > _driver.getMaximumIndexNameLength()) {
             String indexId = null;
-            Iterable<String> indexIndices = _driver.get(indexIndexStorageName, _connection);
 
             long waitForLock;
-            while ((waitForLock = _driver.tryLock(indexId, indexIndexStorageName, _connection, 10000)) > 0) {
+            while ((waitForLock = _driver.tryLock("100", indexIndexStorageName, _connection, 10000)) > 0) {
                 try {
                     Thread.sleep(waitForLock > 100 ? 100 : waitForLock);
                 } catch (InterruptedException ex) {
                     throw new RuntimeException("Unexpected interruption", ex);
                 }
             }
-
+            Iterable<String> indexIndices = _driver.get(indexIndexStorageName, _connection);
             for (String indexIndexKey : indexIndices) {
-                byte[] indexIndex = _driver.get(indexIndexKey, indexName, _connection);
-                Map<String, Object> indexIndexMap = (Map<String, Object>) SerializationUtils.deserialize(indexIndex);
-                if (notTranslated.equals(indexIndexMap.get("name"))) {
-                    indexId = (String) indexIndexMap.get("id");
-                    break;
+                byte[] indexIndex = _driver.get(indexIndexKey, indexIndexStorageName, _connection);
+                String indexIndexCandidate = new String(indexIndex, StandardCharsets.UTF_8);
+                if (notTranslated.equals(indexIndexCandidate)) {
+                    indexId = indexIndexKey;
+                    //break; -- don't break to deplete the iterable so it closes
                 }
             }
 
             if (indexId != null) {
 
-                _driver.unlock(indexId, indexIndexStorageName, _connection);
+                _driver.unlock("100", indexIndexStorageName, _connection);
 
             } else {
-                final String indexIdFinal = UUID.randomUUID().toString();
-                indexId = indexIdFinal;
-                Map<String, Object> indexIndex = new HashMap();
-                indexIndex.put("name", notTranslated);
-                indexIndex.put("id", indexId);
-                _driver.put(indexId, indexIndexStorageName, _connection, SerializationUtils.serialize((Serializable) indexIndex), () -> {
-                    _driver.unlock(indexIdFinal, indexIndexStorageName, _connection);
+                indexId = UUID.randomUUID().toString().replace("-", "");
+                _driver.put(indexId, indexIndexStorageName, _connection, notTranslated.getBytes(StandardCharsets.UTF_8), () -> {
+                    _driver.unlock("100", indexIndexStorageName, _connection);
                 });
 
             }
-            indexName = indexId;
+            indexName = trAppCode + "_" + indexId;
         }
         return indexName;
     }
