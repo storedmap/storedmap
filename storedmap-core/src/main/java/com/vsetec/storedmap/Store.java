@@ -34,7 +34,7 @@ import java.util.Properties;
 public class Store implements Closeable {
 
     // stores cache: driverClass - connectionString - properties - appCode --- store
-    private final static Map<String, Map<String, Map<Properties, Map<String, Store>>>> STORES = new HashMap<>();
+    private final static Map<String, Map<Properties, Map<String, Store>>> STORES = new HashMap<>();
 
     /**
      * Gets the source object for all categories of stored maps
@@ -42,15 +42,13 @@ public class Store implements Closeable {
      *
      * @param driverClassName implementation of
      * {@link com.vsetec.storedmap.Driver}
-     * @param connectionString is used by Driver to connect to the underlying
-     * database
      * @param properties more connection details
      * @param appCode an application short name which is a short string to be
      * used as prefix for all index name of this connection,
      * @return
      */
-    public static Store get(String driverClassName, String connectionString, Properties properties, String appCode) {
-        Map<String, Map<Properties, Map<String, Store>>> ofDriver;
+    public static Store get(String driverClassName, Properties properties, String appCode) {
+        Map<Properties, Map<String, Store>> ofDriver;
         synchronized (STORES) {
             ofDriver = STORES.get(driverClassName);
             if (ofDriver == null) {
@@ -59,21 +57,12 @@ public class Store implements Closeable {
             }
         }
 
-        Map<Properties, Map<String, Store>> ofConnection;
-        synchronized (ofDriver) {
-            ofConnection = ofDriver.get(connectionString);
-            if (ofConnection == null) {
-                ofConnection = new HashMap<>(3);
-                ofDriver.put(connectionString, ofConnection);
-            }
-        }
-
         Map<String, Store> ofProperties;
-        synchronized (ofConnection) {
-            ofProperties = ofConnection.get(properties);
+        synchronized (ofDriver) {
+            ofProperties = ofDriver.get(properties);
             if (ofProperties == null) {
                 ofProperties = new HashMap<>(3);
-                ofConnection.put(properties, ofProperties);
+                ofDriver.put(properties, ofProperties);
             }
         }
 
@@ -81,7 +70,7 @@ public class Store implements Closeable {
         synchronized (ofProperties) {
             ret = ofProperties.get(appCode);
             if (ret == null) {
-                ret = new Store(driverClassName, connectionString, properties, appCode);
+                ret = new Store(driverClassName, properties, appCode);
                 ofProperties.put(appCode, ret);
             }
         }
@@ -94,7 +83,6 @@ public class Store implements Closeable {
     private final Driver _driver;
     private final String _driverClassName;
     private final Object _connection;
-    private final String _connectionString;
     private final Properties _properties;
     private final Persister _persister = new Persister(this);
     private final int _hash;
@@ -103,7 +91,7 @@ public class Store implements Closeable {
         throw new UnsupportedOperationException();
     }
 
-    private Store(String driverClassname, String connectionString, Properties properties, String appCode) {
+    private Store(String driverClassname, Properties properties, String appCode) {
         _driverClassName = driverClassname;
         Driver driver;
         try {
@@ -114,20 +102,18 @@ public class Store implements Closeable {
         }
 
         _appCode = appCode;
-        _connectionString = connectionString;
         _driver = driver;
         _properties = properties;
 
         try {
-            _connection = driver.openConnection(connectionString, properties);
+            _connection = driver.openConnection(properties);
         } catch (Exception e) {
-            throw new StoredMapException("Couldn't connect to the underlying storage with connection " + connectionString, e);
+            throw new StoredMapException("Couldn't connect to the underlying storage with properties " + properties.toString(), e);
         }
 
         int hash = 7;
         hash = 19 * hash + Objects.hashCode(this._appCode);
         hash = 19 * hash + Objects.hashCode(this._driverClassName);
-        hash = 19 * hash + Objects.hashCode(this._connectionString);
         hash = 19 * hash + Objects.hashCode(this._properties);
         _hash = hash;
     }
@@ -148,10 +134,6 @@ public class Store implements Closeable {
 
     public Object getConnection() {
         return _connection;
-    }
-
-    public String getConnectionString() {
-        return _connectionString;
     }
 
     public String getApplicationCode() {
@@ -192,9 +174,6 @@ public class Store implements Closeable {
             return false;
         }
         if (!Objects.equals(this._driverClassName, other._driverClassName)) {
-            return false;
-        }
-        if (!Objects.equals(this._connectionString, other._connectionString)) {
             return false;
         }
         return Objects.equals(this._properties, other._properties);

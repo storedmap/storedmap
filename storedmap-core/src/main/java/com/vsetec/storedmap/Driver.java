@@ -25,7 +25,7 @@ import java.util.Properties;
  */
 public interface Driver<T> {
 
-    T openConnection(String connectionString, Properties properties);
+    T openConnection(Properties properties);
 
     void closeConnection(T connection);
 

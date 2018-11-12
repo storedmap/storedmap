@@ -48,15 +48,15 @@ public class Persister {
     }
 
     void stop() {
-        
-        while(!_inWork.isEmpty()){
-            try{
+
+        while (!_inWork.isEmpty()) {
+            try {
                 Thread.currentThread().sleep(100);
-            }catch(InterruptedException e){
-                
+            } catch (InterruptedException e) {
+
             }
         }
-        
+
         _mainIndexer.shutdown();
         try {
             _mainIndexer.awaitTermination(3, TimeUnit.MINUTES);
