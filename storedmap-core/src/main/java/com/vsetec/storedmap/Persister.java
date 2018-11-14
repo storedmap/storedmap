@@ -32,6 +32,7 @@ public class Persister {
 
     private final Store _store;
     private final ConcurrentHashMap<WeakHolder, SaveOrReschedule> _inWork = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<WeakHolder, SaveOrReschedule> _inLongWork = new ConcurrentHashMap<>();
     private final ScheduledExecutorService _mainIndexer = Executors.newScheduledThreadPool(5, new ThreadFactory() {
         private int _num = 0;
 
@@ -49,7 +50,7 @@ public class Persister {
 
     void stop() {
 
-        while (!_inWork.isEmpty()) {
+        while (!_inLongWork.isEmpty()) {
             try {
                 Thread.currentThread().sleep(100);
             } catch (InterruptedException e) {
@@ -99,6 +100,7 @@ public class Persister {
                 }
                 command = new SaveOrReschedule(storedMap, mapData);
                 _inWork.put(holder, command);
+                _inLongWork.put(holder, command);
                 _mainIndexer.schedule(command, 3, TimeUnit.SECONDS);
                 return mapData;
             }
@@ -153,7 +155,9 @@ public class Persister {
                                 sorter,
                                 tags, () -> {
                                     synchronized (_holder) {
+                                        System.out.println("Running UNLOCK " + indexName + "_lock key " + _holder.getKey());
                                         driver.unlock(_holder.getKey(), indexName, connection);
+                                        _inLongWork.remove(_holder);
                                         _holder.notify();
                                     }
                                 });
