@@ -81,6 +81,7 @@ public class Persister {
         synchronized (holder) {
             SaveOrReschedule command = _inWork.get(holder);
             if (command != null) {
+                System.out.println("***Command to reschedule for " + holder.getKey());
                 command._reschedule = true;
                 return command._mapData;
             } else {
@@ -128,6 +129,7 @@ public class Persister {
                 if (_reschedule) {
                     _reschedule = false;
                     _mainIndexer.schedule(this, 2, TimeUnit.SECONDS);
+                    System.out.println("***Rescheduling for " + _holder.getKey());
                     return;
                 }
 
@@ -144,8 +146,9 @@ public class Persister {
                 String[] tags = _mapData.getTags();
 
                 driver.put(_holder.getKey(), indexName, connection, mapB, () -> {
-
+                    System.out.println("Put " + _holder.getKey() + ", now submitting the additional index");
                     _additionalIndexer.submit(() -> {
+                        System.out.println("Putting the additional index for " + _holder.getKey());
                         driver.put(
                                 _holder.getKey(),
                                 indexName,
@@ -154,6 +157,7 @@ public class Persister {
                                 category.getLocales(),
                                 sorter,
                                 tags, () -> {
+                                    System.out.println("Ready to running UNLOCK " + indexName + "_lock key " + _holder.getKey());
                                     synchronized (_holder) {
                                         System.out.println("Running UNLOCK " + indexName + "_lock key " + _holder.getKey());
                                         driver.unlock(_holder.getKey(), indexName, connection);
