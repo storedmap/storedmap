@@ -69,10 +69,8 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
 
-        String driverClassName = (String) in.readObject();
         Properties properties = (Properties) in.readObject();
-        String appCode = (String) in.readObject();
-        Store store = Store.get(driverClassName, properties, appCode);
+        Store store = Store.get(properties);
 
         String categoryName = (String) in.readObject();
         Category category = store.getCategory(categoryName);
@@ -100,9 +98,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
     private void writeObject(ObjectOutputStream out) throws IOException {
         Store store = _category.getStore();
-        out.writeChars(store.getDriver().getClass().getName());
         out.writeObject(store.getProperties());
-        out.writeChars(store.getApplicationCode());
         out.writeChars(_category.getName());
         out.writeChars(_holder.getKey());
     }

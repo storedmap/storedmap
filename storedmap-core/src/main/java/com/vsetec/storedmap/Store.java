@@ -33,45 +33,23 @@ import java.util.Properties;
  */
 public class Store implements Closeable {
 
-    // stores cache: driverClass - connectionString - properties - appCode --- store
-    private final static Map<String, Map<Properties, Map<String, Store>>> STORES = new HashMap<>();
+    private final static Map<Properties, Store> STORES = new HashMap<>();
 
     /**
      * Gets the source object for all categories of stored maps
      *
      *
-     * @param driverClassName implementation of
-     * {@link com.vsetec.storedmap.Driver}
-     * @param properties more connection details
-     * @param appCode an application short name which is a short string to be
-     * used as prefix for all index name of this connection,
+     * @param properties Database connection details including application specific prefix for all 
+     * indices, the StoredMap database driver and additional database connection characteristics
      * @return
      */
-    public static Store get(String driverClassName, Properties properties, String appCode) {
-        Map<Properties, Map<String, Store>> ofDriver;
-        synchronized (STORES) {
-            ofDriver = STORES.get(driverClassName);
-            if (ofDriver == null) {
-                ofDriver = new HashMap<>();
-                STORES.put(driverClassName, ofDriver);
-            }
-        }
-
-        Map<String, Store> ofProperties;
-        synchronized (ofDriver) {
-            ofProperties = ofDriver.get(properties);
-            if (ofProperties == null) {
-                ofProperties = new HashMap<>(3);
-                ofDriver.put(properties, ofProperties);
-            }
-        }
-
+    public static Store get(Properties properties) {
         Store ret;
-        synchronized (ofProperties) {
-            ret = ofProperties.get(appCode);
+        synchronized (STORES) {
+            ret = STORES.get(properties);
             if (ret == null) {
-                ret = new Store(driverClassName, properties, appCode);
-                ofProperties.put(appCode, ret);
+                ret = new Store(properties);
+                STORES.put(properties, ret);
             }
         }
         return ret;
@@ -81,7 +59,6 @@ public class Store implements Closeable {
 
     private final String _appCode;
     private final Driver _driver;
-    private final String _driverClassName;
     private final Object _connection;
     private final Properties _properties;
     private final Persister _persister = new Persister(this);
@@ -91,17 +68,18 @@ public class Store implements Closeable {
         throw new UnsupportedOperationException();
     }
 
-    private Store(String driverClassname, Properties properties, String appCode) {
-        _driverClassName = driverClassname;
+    private Store(Properties properties) {
         Driver driver;
+        String driverClassname = properties.getProperty("storedmap.driver", "com.vsetec.storedmap.jdbc.GenericJdbcDriver");
         try {
+           
             Class driverClass = Class.forName(driverClassname);
             driver = (Driver) driverClass.newInstance();
         } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
             throw new StoredMapException("Couldn't load the driver " + driverClassname, e);
         }
 
-        _appCode = appCode;
+        _appCode = properties.getProperty("storedmap.applicationCode", "storedmap");
         _driver = driver;
         _properties = properties;
 
@@ -112,8 +90,6 @@ public class Store implements Closeable {
         }
 
         int hash = 7;
-        hash = 19 * hash + Objects.hashCode(this._appCode);
-        hash = 19 * hash + Objects.hashCode(this._driverClassName);
         hash = 19 * hash + Objects.hashCode(this._properties);
         _hash = hash;
     }
@@ -170,12 +146,6 @@ public class Store implements Closeable {
             return false;
         }
         final Store other = (Store) obj;
-        if (!Objects.equals(this._appCode, other._appCode)) {
-            return false;
-        }
-        if (!Objects.equals(this._driverClassName, other._driverClassName)) {
-            return false;
-        }
         return Objects.equals(this._properties, other._properties);
     }
 
