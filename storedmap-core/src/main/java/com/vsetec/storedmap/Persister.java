@@ -17,7 +17,6 @@ package com.vsetec.storedmap;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -39,10 +38,10 @@ public class Persister {
         @Override
         public Thread newThread(Runnable r) {
             _num++;
-            return new Thread(r, "Indexer-" + _num);
+            return new Thread(r, "StoredMapIndexer-" + _num);
         }
     });
-    private final ExecutorService _additionalIndexer = Executors.newSingleThreadExecutor((Runnable r) -> new Thread(r, "AdditionalIndexPersister"));
+    //private final ExecutorService _additionalIndexer = Executors.newSingleThreadExecutor((Runnable r) -> new Thread(r, "AdditionalIndexPersister"));
 
     Persister(Store store) {
         _store = store;
@@ -64,12 +63,12 @@ public class Persister {
         } catch (InterruptedException e) {
             throw new RuntimeException("Unexpected termination", e);
         }
-        _additionalIndexer.shutdown();
-        try {
-            _additionalIndexer.awaitTermination(3, TimeUnit.MINUTES);
-        } catch (InterruptedException e) {
-            throw new RuntimeException("Unexpected termination", e);
-        }
+//        _additionalIndexer.shutdown();
+//        try {
+//            _additionalIndexer.awaitTermination(3, TimeUnit.MINUTES);
+//        } catch (InterruptedException e) {
+//            throw new RuntimeException("Unexpected termination", e);
+//        }
     }
 
     boolean isInWork(WeakHolder holder) {
@@ -144,27 +143,25 @@ public class Persister {
                 String[] tags = _mapData.getTags();
 
                 driver.put(_holder.getKey(), indexName, connection, mapB, () -> {
-                    _additionalIndexer.submit(() -> {
-                        driver.put(
-                                _holder.getKey(),
-                                indexName,
-                                connection,
-                                mapDataMap,
-                                category.getLocales(),
-                                sorter,
-                                tags, () -> {
-                                    synchronized (_holder) {
-                                        driver.unlock(_holder.getKey(), indexName, connection);
-                                        _inLongWork.remove(_holder);
-                                        _holder.notify();
-                                    }
-                                });
-
-                    });
+                    _inWork.remove(_holder);
+                }, () -> {
+                    driver.put(
+                            _holder.getKey(),
+                            indexName,
+                            connection,
+                            mapDataMap,
+                            category.getLocales(),
+                            sorter,
+                            tags, () -> {
+                                synchronized (_holder) {
+                                    driver.unlock(_holder.getKey(), indexName, connection);
+                                    _inLongWork.remove(_holder);
+                                    _holder.notify();
+                                }
+                            });
 
                 });
 
-                _inWork.remove(_holder);
             }
 
         }

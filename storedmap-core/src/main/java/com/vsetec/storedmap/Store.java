@@ -39,8 +39,9 @@ public class Store implements Closeable {
      * Gets the source object for all categories of stored maps
      *
      *
-     * @param properties Database connection details including application specific prefix for all 
-     * indices, the StoredMap database driver and additional database connection characteristics
+     * @param properties Database connection details including application
+     * specific prefix for all indices, the StoredMap database driver and
+     * additional database connection characteristics
      * @return
      */
     public static Store get(Properties properties) {
@@ -72,7 +73,7 @@ public class Store implements Closeable {
         Driver driver;
         String driverClassname = properties.getProperty("storedmap.driver", "com.vsetec.storedmap.jdbc.GenericJdbcDriver");
         try {
-           
+
             Class driverClass = Class.forName(driverClassname);
             driver = (Driver) driverClass.newInstance();
         } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {

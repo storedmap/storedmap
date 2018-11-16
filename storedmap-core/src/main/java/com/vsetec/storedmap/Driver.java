@@ -22,6 +22,7 @@ import java.util.Properties;
 /**
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
+ * @param <T> Type of the connection object
  */
 public interface Driver<T> {
 
@@ -103,7 +104,8 @@ public interface Driver<T> {
             String indexName,
             T connection,
             byte[] value,
-            Runnable callbackOnIndex);
+            Runnable callbackBeforeIndex,
+            Runnable callbackAfterIndex);
 
     void put(
             String key,
@@ -113,7 +115,7 @@ public interface Driver<T> {
             Locale[] locales,
             byte[] sorter,
             String[] tags,
-            Runnable callbackOnAdditionalIndex);
+            Runnable callbackAfterAdditionalIndex);
 
     void remove(String key, String indexName, T connection, Runnable callback);
 

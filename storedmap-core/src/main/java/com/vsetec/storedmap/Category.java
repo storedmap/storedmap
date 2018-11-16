@@ -98,6 +98,7 @@ public class Category {
         byte[] localesB = SerializationUtils.serialize(locales);
         String localesIndexStorageName = _translate(_store.getApplicationCode()) + "__locales";
         _driver.put(_indexName, localesIndexStorageName, _connection, localesB, () -> {
+        }, () -> {
         });
 
         if (locales.length == 0) {
@@ -177,6 +178,7 @@ public class Category {
             } else {
                 indexId = UUID.randomUUID().toString().replace("-", "");
                 _driver.put(indexId, indexIndexStorageName, _connection, notTranslated.getBytes(StandardCharsets.UTF_8), () -> {
+                }, () -> {
                     _driver.unlock("100", indexIndexStorageName, _connection);
                 });
 
