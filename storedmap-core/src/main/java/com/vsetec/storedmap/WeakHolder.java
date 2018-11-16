@@ -50,7 +50,12 @@ public class WeakHolder {
         if (map == null) {
             _wr = null;
         } else {
-            MapData curMap = _wr.get();
+            MapData curMap;
+            if (_wr != null) {
+                curMap = _wr.get();
+            } else {
+                curMap = null;
+            }
             if (curMap != map) { // don't replace the object if we're reputting it
                 _wr = new WeakReference<>(map);
             }

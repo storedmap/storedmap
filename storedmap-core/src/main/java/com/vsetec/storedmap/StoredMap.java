@@ -109,7 +109,8 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
     private MapData _getOrLoadForPersist() {
 
-        return _category.getStore().getPersister().scheduleForPersist(this);
+        MapData md = _category.getStore().getPersister().scheduleForPersist(this);
+        return md;
 
     }
 
@@ -219,10 +220,9 @@ public class StoredMap implements Map<String, Object>, Serializable {
     @Override
     public Object put(String key, Object value) {
         synchronized (_holder) {
-            MapData map = _getOrLoadForPersist();
-            Object ret = map.getMap().put(key, value);
-            //_persist(map);
-            //System.out.println("putting for key: " + _holder.getKey() + ", something with key " + key + ", value - " + value.toString());
+            MapData md = _getOrLoadForPersist();
+            Map<String, Object> map = md.getMap();
+            Object ret = map.put(key, value);
             return ret;
         }
     }
@@ -272,7 +272,8 @@ public class StoredMap implements Map<String, Object>, Serializable {
             return null;
         }
         synchronized (_holder) {
-            Map<String, Object> map = getMapData().getMap();
+            MapData md = getMapData();
+            Map<String, Object> map = md.getMap();
             Object ret = map.get(key);
             ret = _backupWithMe(ret, (String) key);
             return ret;

@@ -212,7 +212,7 @@ public class Category {
             if (cached == null) {
                 WeakHolder holder = new WeakHolder(key, this);
                 ret = new StoredMap(this, holder);
-                _cache.put(key, new WeakReference<>(cached));
+                _cache.put(key, new WeakReference<>(holder));
             } else {
                 ret = new StoredMap(this, cached);
             }
