@@ -151,7 +151,7 @@ public class Category {
         String trCatName = _translate(_name);
 
         String indexName = trAppCode + "_" + trCatName;
-        if (indexName.length() > _driver.getMaximumIndexNameLength()) {
+        if (indexName.length() > _driver.getMaximumIndexNameLength(_connection)) {
             String indexId = null;
 
             long waitForLock;

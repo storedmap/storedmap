@@ -139,7 +139,7 @@ public class Persister {
 
                 // data for additional index
                 Map<String, Object> mapDataMap = _mapData.getMap();
-                byte[] sorter = _mapData.getSorterAsBytes(category.getCollator(), driver.getMaximumSorterLength());
+                byte[] sorter = _mapData.getSorterAsBytes(category.getCollator(), driver.getMaximumSorterLength(connection));
                 String[] tags = _mapData.getTags();
 
                 driver.put(_holder.getKey(), indexName, connection, mapB, () -> {

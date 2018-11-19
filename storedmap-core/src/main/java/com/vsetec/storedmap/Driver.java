@@ -15,7 +15,6 @@
  */
 package com.vsetec.storedmap;
 
-import java.util.Collection;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
@@ -31,13 +30,13 @@ public interface Driver<T> {
 
     void closeConnection(T connection);
 
-    int getMaximumIndexNameLength();
+    int getMaximumIndexNameLength(T connection);
 
-    int getMaximumKeyLength();
+    int getMaximumKeyLength(T connection);
 
-    int getMaximumTagLength();
+    int getMaximumTagLength(T connection);
 
-    int getMaximumSorterLength();
+    int getMaximumSorterLength(T connection);
 
     byte[] get(String key, String indexName, T connection);
 
