@@ -22,12 +22,32 @@ import java.util.Objects;
 import java.util.Properties;
 
 /**
- * A database representation. The class holds static references to multiple
- * instances of itself, unique for the database type, database connections
- * string that defines a database of the type, properties that affect the
- * database connection, and the application code which is used to distinguish
- * indexes or tables created in the database that belong to different
- * applications
+ * A database representation.
+ *
+ * <p>
+ * The class holds static references to multiple instances of itself, unique for
+ * the database type, database connections string that defines a database of the
+ * type, properties that affect the database connection, and the application
+ * code which is used to distinguish indexes or tables created in the database
+ * that belong to different applications.</p>
+ *
+ * The specific Store is retrieved or created by the static
+ * {@link #get(Properties)} method.
+ *
+ * <p>
+ * The two main properties are:</p>
+ *
+ * <ul><li><b>storedmap.driver</b>: the name of the class that implements
+ * {@link com.vsetec.storedmap.Driver}</li>
+ *
+ * <li><b>storedmap.applicationCode</b>: the substring that prefixes all
+ * underlying data store artifacts (tables, indices etc)</li></ul>
+ *
+ * <p>
+ * The same properties list may contain the configuration items that the driver
+ * will use. It is advised that these additional properties have the
+ * {@code storedmap.} prefix</p>
+ *
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
  */
@@ -36,13 +56,13 @@ public class Store implements Closeable {
     private final static Map<Properties, Store> STORES = new HashMap<>();
 
     /**
-     * Gets the source object for all categories of stored maps
+     * Gets the source object for all categories of stored maps, aka Store
      *
      *
      * @param properties Database connection details including application
-     * specific prefix for all indices, the StoredMap database driver and
-     * additional database connection characteristics
-     * @return
+     * specific prefix for all indices, the StoredMap database driver class name
+     * and additional database connection characteristics
+     * @return the Store either previously created or new
      */
     public static Store get(Properties properties) {
         Store ret;
@@ -95,32 +115,53 @@ public class Store implements Closeable {
         _hash = hash;
     }
 
+    /**
+     * Closes the resources associated with this Store
+     */
     @Override
     public void close() {
         _persister.stop();
         _driver.closeConnection(_connection);
     }
 
-    public Persister getPersister() {
+    Persister getPersister() {
         return _persister;
     }
 
-    public Driver getDriver() {
+    Driver getDriver() {
         return _driver;
     }
 
-    public Object getConnection() {
+    Object getConnection() {
         return _connection;
     }
 
+    /**
+     * Gets the application code - the string prefix used to distinguish the
+     * underlying store artifacts that belong to StoredMap
+     *
+     * @return the application specific prefix
+     */
     public String getApplicationCode() {
         return _appCode;
     }
 
+    /**
+     * Returns the configuration parameters that were used to create this Store
+     *
+     * @return the configuration parameters
+     */
     public Properties getProperties() {
         return _properties;
     }
 
+    /**
+     * Gets the named {@link Category} - a group of {@link StoredMap}s with
+     * similar structure
+     *
+     * @param categoryName name of a {@link Category}
+     * @return
+     */
     public synchronized Category getCategory(String categoryName) {
         Category ret = _categories.get(categoryName);
         if (ret == null) {
