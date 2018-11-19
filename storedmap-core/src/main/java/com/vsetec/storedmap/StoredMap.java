@@ -76,7 +76,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
         Category category = store.getCategory(categoryName);
 
         String key = (String) in.readObject();
-        StoredMap another = category.get(key);
+        StoredMap another = category.getMap(key);
 
         try {
             Field fld = this.getClass().getDeclaredField("_category");

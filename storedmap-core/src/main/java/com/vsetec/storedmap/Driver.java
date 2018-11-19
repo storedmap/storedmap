@@ -15,6 +15,7 @@
  */
 package com.vsetec.storedmap;
 
+import java.util.Collection;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
@@ -55,6 +56,22 @@ public interface Driver<T> {
     Iterable<String> get(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending);
 
     Iterable<String> get(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter, boolean ascending);
+
+    Iterable<String> get(String indexName, T connection, int from, int size);
+
+    Iterable<String> get(String indexName, T connection, String[] anyOfTags, int from, int size);
+
+    Iterable<String> get(String indexName, T connection, byte[] minSorter, byte[] maxSorter, boolean ascending, int from, int size);
+
+    Iterable<String> get(String indexName, T connection, String textQuery, int from, int size);
+
+    Iterable<String> get(String indexName, T connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending, int from, int size);
+
+    Iterable<String> get(String indexName, T connection, String textQuery, String[] anyOfTags, int from, int size);
+
+    Iterable<String> get(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending, int from, int size);
+
+    Iterable<String> get(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter, boolean ascending, int from, int size);
 
     /**
      * Tries to lock the key in a specified index or returns the value
