@@ -157,10 +157,10 @@ public class Store implements Closeable {
 
     /**
      * Gets the named {@link Category} - a group of {@link StoredMap}s with
-     * similar structure
+     * mostly similar structure
      *
      * @param categoryName name of a {@link Category}
-     * @return
+     * @return a {@link Category} by that name
      */
     public synchronized Category getCategory(String categoryName) {
         Category ret = _categories.get(categoryName);

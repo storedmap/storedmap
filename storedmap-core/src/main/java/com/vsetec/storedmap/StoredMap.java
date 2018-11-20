@@ -35,7 +35,7 @@ import org.apache.commons.lang3.SerializationUtils;
 
 /**
  *
- * A {@code java.util.Map} backed by a record in the database
+ * A persisted, data store backed {@link java.util.Map}
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
  */

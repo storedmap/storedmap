@@ -32,7 +32,10 @@ import org.apache.commons.codec.binary.Base32;
 import org.apache.commons.lang3.SerializationUtils;
 
 /**
- * A database table or index representation
+ * A named group of {@link StoredMap}s with similar structure.
+ *
+ * This class is similar to a relational database table or a key value store
+ * index
  *
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
@@ -92,6 +95,25 @@ public class Category {
         }
     }
 
+    /**
+     * Sets the language information that will be used for sorting.
+     *
+     * <p>
+     * This method allows to provide one or more {@link Locale}s which will be
+     * used for generating collation codes for string data, or for hinting the
+     * storing mechanism about languages used in the {@link StoredMap}. The
+     * {@link Driver} may use this information for indexing the stored
+     * structure</p>
+     *
+     * <p>
+     * The order of Locale objects provided does matter. The collation rules
+     * take it into account and attempt to provide collation code that will
+     * allow certain languages go before others, if they use different
+     * alphabets</p>
+     *
+     * @param locales An array of {@link Locale}s to associate with this
+     * Category. The order matters
+     */
     public final synchronized void setLocales(Locale[] locales) {
         _locales.clear();
         _locales.addAll(Arrays.asList(locales));
@@ -120,6 +142,12 @@ public class Category {
         // TODO: recollate all objects in this category =)
     }
 
+    /**
+     * The language information associated with this Category
+     *
+     *
+     * @return Locale objects
+     */
     public Locale[] getLocales() {
         return _locales.toArray(new Locale[_locales.size()]);
     }
@@ -189,10 +217,20 @@ public class Category {
         return indexName;
     }
 
+    /**
+     * Returns the {@link Store} this Category belongs to
+     *
+     * @return The Store
+     */
     public Store getStore() {
         return _store;
     }
 
+    /**
+     * Returns this Category's name
+     *
+     * @return the name of this Category
+     */
     public String getName() {
         return _name;
     }
@@ -202,6 +240,23 @@ public class Category {
     }
 
     // simple
+    /**
+     * The main method to get a {@link StoredMap} by it's identifier
+     *
+     * <p>
+     * The StoredMap with the provided identifier may or may not be present in
+     * the store, in the latter case it will be created on the fly.</p>
+     *
+     * <p>
+     * The StoredMaps are identified by the key, which can be any string in any
+     * language and containing any characters. The only limitation is it's
+     * length. This key size is determined by the underlying storage and
+     * reported by the driver's method
+     * {@link Driver#getMaximumKeyLength(java.lang.Object)}</p>
+     *
+     * @param key the StoredMap identifier
+     * @return the StoredMap, either new or previously persisted
+     */
     public StoredMap getMap(String key) {
         StoredMap ret;
         synchronized (_cache) {
@@ -229,6 +284,11 @@ public class Category {
         }
     }
 
+    /**
+     * Gets an iterable of all StoredMaps in this Category
+     *
+     * @return all StoredMaps of this Category
+     */
     public StoredMaps getMaps() {
         return new StoredMaps(this, _driver.get(_indexName, _connection));
     }
