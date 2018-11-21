@@ -82,11 +82,11 @@ public class Category {
         _connection = store.getConnection();
         _driver = store.getDriver();
 
-        String indexName = store.getApplicationCode() + "_" + name;
+        String indexName = store.applicationCode() + "_" + name;
         _indexName = _translateIndexName(indexName);
 
         // get category locales
-        String localesIndexStorageName = _translate(_store.getApplicationCode()) + "__locales";
+        String localesIndexStorageName = _translate(_store.applicationCode()) + "__locales";
         byte[] localesB = _driver.get(_indexName, localesIndexStorageName, _connection);
         Locale[] locales;
         if (localesB != null && localesB.length > 0) {
@@ -119,7 +119,7 @@ public class Category {
         _locales.addAll(Arrays.asList(locales));
 
         byte[] localesB = SerializationUtils.serialize(locales);
-        String localesIndexStorageName = _translate(_store.getApplicationCode()) + "__locales";
+        String localesIndexStorageName = _translate(_store.applicationCode()) + "__locales";
         _driver.put(_indexName, localesIndexStorageName, _connection, localesB, () -> {
         }, () -> {
         });
@@ -148,11 +148,11 @@ public class Category {
      *
      * @return Locale objects
      */
-    public Locale[] getLocales() {
+    public Locale[] locales() {
         return _locales.toArray(new Locale[_locales.size()]);
     }
 
-    public RuleBasedCollator getCollator() {
+    public RuleBasedCollator collator() {
         return _collator;
     }
 
@@ -173,7 +173,7 @@ public class Category {
     }
 
     private String _translateIndexName(String notTranslated) {
-        String trAppCode = _translate(_store.getApplicationCode());
+        String trAppCode = _translate(_store.applicationCode());
         String indexIndexStorageName = trAppCode + "__indices";
 
         String trCatName = _translate(_name);
@@ -222,7 +222,7 @@ public class Category {
      *
      * @return The Store
      */
-    public Store getStore() {
+    public Store store() {
         return _store;
     }
 
@@ -231,7 +231,7 @@ public class Category {
      *
      * @return the name of this Category
      */
-    public String getName() {
+    public String name() {
         return _name;
     }
 
@@ -257,7 +257,7 @@ public class Category {
      * @param key the StoredMap identifier
      * @return the StoredMap, either new or previously persisted
      */
-    public StoredMap getMap(String key) {
+    public StoredMap get(String key) {
         StoredMap ret;
         synchronized (_cache) {
             WeakHolder cached;
@@ -289,39 +289,39 @@ public class Category {
      *
      * @return all StoredMaps of this Category
      */
-    public StoredMaps getMaps() {
+    public Iterable<StoredMap> maps() {
         return new StoredMaps(this, _driver.get(_indexName, _connection));
     }
 
-    public StoredMaps getMaps(String[] anyOfTags) {
+    public Iterable<StoredMap> maps(String[] anyOfTags) {
         return new StoredMaps(this, _driver.get(_indexName, _connection, anyOfTags));
     }
 
-    public StoredMaps getMaps(byte[] minSorter, byte[] maxSorter, boolean ascending) {
+    public Iterable<StoredMap> maps(byte[] minSorter, byte[] maxSorter, boolean ascending) {
         return new StoredMaps(this, _driver.get(_indexName, _connection, minSorter, maxSorter, ascending));
     }
 
-    public StoredMaps getMaps(String textQuery) {
+    public Iterable<StoredMap> maps(String textQuery) {
         return new StoredMaps(this, _driver.get(_indexName, _connection, textQuery));
     }
 
-    public StoredMaps getMaps(byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending) {
+    public Iterable<StoredMap> maps(byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending) {
         return new StoredMaps(this, _driver.get(_indexName, _connection, minSorter, maxSorter, anyOfTags, ascending));
     }
 
-    public StoredMaps getMaps(String textQuery, String[] anyOfTags) {
+    public Iterable<StoredMap> maps(String textQuery, String[] anyOfTags) {
         return new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, anyOfTags));
     }
 
-    public StoredMaps getMaps(String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending) {
+    public Iterable<StoredMap> maps(String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending) {
         return new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, minSorter, maxSorter, anyOfTags, ascending));
     }
 
-    public StoredMaps getMaps(String textQuery, byte[] minSorter, byte[] maxSorter, boolean ascending) {
+    public Iterable<StoredMap> maps(String textQuery, byte[] minSorter, byte[] maxSorter, boolean ascending) {
         return new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, minSorter, maxSorter, ascending));
     }
 
-    public List<StoredMap> getMaps(int from, int size) {
+    public List<StoredMap> maps(int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, from, size));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
         for (StoredMap map : maps) {
@@ -330,7 +330,7 @@ public class Category {
         return Collections.unmodifiableList(ret);
     }
 
-    public List<StoredMap> getMaps(String[] anyOfTags, int from, int size) {
+    public List<StoredMap> maps(String[] anyOfTags, int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, anyOfTags, from, size));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
         for (StoredMap map : maps) {
@@ -339,7 +339,7 @@ public class Category {
         return Collections.unmodifiableList(ret);
     }
 
-    public List<StoredMap> getMaps(byte[] minSorter, byte[] maxSorter, boolean ascending, int from, int size) {
+    public List<StoredMap> maps(byte[] minSorter, byte[] maxSorter, boolean ascending, int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, minSorter, maxSorter, ascending, from, size));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
         for (StoredMap map : maps) {
@@ -348,7 +348,7 @@ public class Category {
         return Collections.unmodifiableList(ret);
     }
 
-    public List<StoredMap> getMaps(String textQuery, int from, int size) {
+    public List<StoredMap> maps(String textQuery, int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, from, size));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
         for (StoredMap map : maps) {
@@ -357,7 +357,7 @@ public class Category {
         return Collections.unmodifiableList(ret);
     }
 
-    public List<StoredMap> getMaps(byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending, int from, int size) {
+    public List<StoredMap> maps(byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending, int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, minSorter, maxSorter, anyOfTags, ascending, from, size));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
         for (StoredMap map : maps) {
@@ -366,7 +366,7 @@ public class Category {
         return Collections.unmodifiableList(ret);
     }
 
-    public List<StoredMap> getMaps(String textQuery, String[] anyOfTags, int from, int size) {
+    public List<StoredMap> maps(String textQuery, String[] anyOfTags, int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, anyOfTags, from, size));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
         for (StoredMap map : maps) {
@@ -375,7 +375,7 @@ public class Category {
         return Collections.unmodifiableList(ret);
     }
 
-    public List<StoredMap> getMaps(String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending, int from, int size) {
+    public List<StoredMap> maps(String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending, int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, minSorter, maxSorter, anyOfTags, ascending, from, size));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
         for (StoredMap map : maps) {
@@ -384,7 +384,7 @@ public class Category {
         return Collections.unmodifiableList(ret);
     }
 
-    public List<StoredMap> getMaps(String textQuery, byte[] minSorter, byte[] maxSorter, boolean ascending, int from, int size) {
+    public List<StoredMap> maps(String textQuery, byte[] minSorter, byte[] maxSorter, boolean ascending, int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, minSorter, maxSorter, ascending, from, size));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
         for (StoredMap map : maps) {

@@ -243,5 +243,7 @@ public interface Driver<T> {
             Runnable callbackAfterAdditionalIndex);
 
     void remove(String key, String indexName, T connection, Runnable callback);
+    
+    Iterable<String>getIndices(T connection);
 
 }

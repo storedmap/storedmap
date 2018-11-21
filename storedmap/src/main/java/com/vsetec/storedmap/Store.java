@@ -32,7 +32,7 @@ import java.util.Properties;
  * that belong to different applications.</p>
  *
  * The specific Store is retrieved or created by the static
- * {@link #get(Properties)} method.
+ * {@link #getStore(Properties)} method.
  *
  * <p>
  * The two main properties are:</p>
@@ -64,7 +64,7 @@ public class Store implements Closeable {
      * and additional database connection characteristics
      * @return the Store either previously created or new
      */
-    public static Store get(Properties properties) {
+    public static Store getStore(Properties properties) {
         Store ret;
         synchronized (STORES) {
             ret = STORES.get(properties);
@@ -142,7 +142,7 @@ public class Store implements Closeable {
      *
      * @return the application specific prefix
      */
-    public String getApplicationCode() {
+    public String applicationCode() {
         return _appCode;
     }
 
@@ -151,7 +151,7 @@ public class Store implements Closeable {
      *
      * @return the configuration parameters
      */
-    public Properties getProperties() {
+    public Properties properties() {
         return _properties;
     }
 
@@ -162,7 +162,7 @@ public class Store implements Closeable {
      * @param categoryName name of a {@link Category}
      * @return a {@link Category} by that name
      */
-    public synchronized Category getCategory(String categoryName) {
+    public synchronized Category get(String categoryName) {
         Category ret = _categories.get(categoryName);
         if (ret == null) {
             ret = new Category(this, categoryName);

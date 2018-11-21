@@ -208,6 +208,13 @@ public class MixedDriver implements Driver<MixedDriver.MixedConnection> {
         });
     }
 
+    @Override
+    public Iterable<String> getIndices(MixedConnection connection) {
+        return connection._mainDriver.getIndices(connection);
+    }
+    
+    
+
     public static class MixedConnection<I, F> {
 
         private final Driver<I> _mainDriver;

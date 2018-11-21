@@ -70,13 +70,13 @@ public class StoredMap implements Map<String, Object>, Serializable {
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
 
         Properties properties = (Properties) in.readObject();
-        Store store = Store.get(properties);
+        Store store = Store.getStore(properties);
 
         String categoryName = (String) in.readObject();
-        Category category = store.getCategory(categoryName);
+        Category category = store.get(categoryName);
 
         String key = (String) in.readObject();
-        StoredMap another = category.getMap(key);
+        StoredMap another = category.get(key);
 
         try {
             Field fld = this.getClass().getDeclaredField("_category");
@@ -97,15 +97,15 @@ public class StoredMap implements Map<String, Object>, Serializable {
     }
 
     private void writeObject(ObjectOutputStream out) throws IOException {
-        Store store = _category.getStore();
-        out.writeObject(store.getProperties());
-        out.writeChars(_category.getName());
+        Store store = _category.store();
+        out.writeObject(store.properties());
+        out.writeChars(_category.name());
         out.writeChars(_holder.getKey());
     }
 
     private MapData _getOrLoadForPersist() {
 
-        MapData md = _category.getStore().getPersister().scheduleForPersist(this);
+        MapData md = _category.store().getPersister().scheduleForPersist(this);
         return md;
 
     }
@@ -113,10 +113,10 @@ public class StoredMap implements Map<String, Object>, Serializable {
     public void remove() {
         // immediate remove
         synchronized (_holder) {
-            Store store = _category.getStore();
+            Store store = _category.store();
             Driver driver = store.getDriver();
 
-            if (!_category.getStore().getPersister().isInWork(_holder)) {
+            if (!_category.store().getPersister().isInWork(_holder)) {
                 long waitForLock;
                 // wait for releasing on other machines then lock for ourselves
                 while ((waitForLock = driver.tryLock(_holder.getKey(), _category.getIndexName(), store.getConnection(), 100000)) > 0) {
@@ -149,7 +149,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
             MapData map = _holder.get();
             if (map == null) {
                 String key = _holder.getKey();
-                Store store = _category.getStore();
+                Store store = _category.store();
                 byte[] mapB = store.getDriver().get(key, _category.getIndexName(), store.getConnection());
                 if (mapB != null) {
                     map = (MapData) SerializationUtils.deserialize(mapB);
