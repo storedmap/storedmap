@@ -15,7 +15,10 @@
  */
 package com.vsetec.storedmap;
 
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Set;
 
 /**
  *
@@ -25,26 +28,67 @@ public class StoredMaps implements Iterable<StoredMap> {
 
     private final Iterable<String> _iterable;
     private final Category _category;
+    private final boolean _includeCached;
 
     StoredMaps(Category category, Iterable<String> iterable) {
         _iterable = iterable;
         _category = category;
+        _includeCached = false;
+    }
+
+    StoredMaps(Category category, Iterable<String> iterable, boolean includeCachedInCategory) {
+        _iterable = iterable;
+        _category = category;
+        _includeCached = includeCachedInCategory;
     }
 
     @Override
     public Iterator<StoredMap> iterator() {
 
-        Iterator<String> i = _iterable.iterator();
-
         return new Iterator<StoredMap>() {
+
+            private Iterator<String> _i = _iterable.iterator();
+            private final Set<String> _keyCache;
+            boolean _switched = false;
+
+            {
+                if (_includeCached) {
+                    _keyCache = _category.keyCache();
+                } else {
+                    _keyCache = Collections.EMPTY_SET;
+                }
+            }
+
             @Override
             public boolean hasNext() {
-                return i.hasNext();
+                boolean ret = _i.hasNext();
+                if (!ret && !_switched) {
+                    _switched = true;
+                    _i = _keyCache.iterator();
+                    ret = _i.hasNext();
+                }
+                return ret;
             }
 
             @Override
             public StoredMap next() {
-                String nextKey = i.next();
+                String nextKey;
+                try {
+                    
+                    nextKey = _i.next();
+                    if (!_switched && !_keyCache.isEmpty()) { // skipping all cached
+                        _keyCache.remove(nextKey);
+                    }
+
+                } catch (NoSuchElementException e) {
+                    if (!_switched) {
+                        _switched = true;
+                        _i = _keyCache.iterator();
+                        nextKey = _i.next();
+                    } else {
+                        throw e;
+                    }
+                }
                 return _category.map(nextKey);
             }
         };
