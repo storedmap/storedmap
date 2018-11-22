@@ -22,10 +22,16 @@ import java.text.ParseException;
 import java.text.RuleBasedCollator;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import org.apache.commons.codec.binary.Base32;
@@ -40,7 +46,7 @@ import org.apache.commons.lang3.SerializationUtils;
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
  */
-public class Category {
+public class Category implements Map<String, Map<String, Object>> {
 
     private static final RuleBasedCollator DEFAULTCOLLATOR;
 
@@ -91,7 +97,7 @@ public class Category {
         Locale[] locales;
         if (localesB != null && localesB.length > 0) {
             locales = (Locale[]) SerializationUtils.deserialize(localesB);
-            setLocales(locales);
+            locales(locales);
         }
     }
 
@@ -114,7 +120,7 @@ public class Category {
      * @param locales An array of {@link Locale}s to associate with this
      * Category. The order matters
      */
-    public final synchronized void setLocales(Locale[] locales) {
+    public final synchronized void locales(Locale[] locales) {
         _locales.clear();
         _locales.addAll(Arrays.asList(locales));
 
@@ -257,7 +263,7 @@ public class Category {
      * @param key the StoredMap identifier
      * @return the StoredMap, either new or previously persisted
      */
-    public StoredMap get(String key) {
+    public StoredMap map(String key) {
         StoredMap ret;
         synchronized (_cache) {
             WeakHolder cached;
@@ -323,7 +329,7 @@ public class Category {
 
     public List<StoredMap> maps(int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, from, size));
-        ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
+        ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
             ret.add(map);
         }
@@ -332,7 +338,7 @@ public class Category {
 
     public List<StoredMap> maps(String[] anyOfTags, int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, anyOfTags, from, size));
-        ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
+        ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
             ret.add(map);
         }
@@ -341,7 +347,7 @@ public class Category {
 
     public List<StoredMap> maps(byte[] minSorter, byte[] maxSorter, boolean ascending, int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, minSorter, maxSorter, ascending, from, size));
-        ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
+        ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
             ret.add(map);
         }
@@ -350,7 +356,7 @@ public class Category {
 
     public List<StoredMap> maps(String textQuery, int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, from, size));
-        ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
+        ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
             ret.add(map);
         }
@@ -359,7 +365,7 @@ public class Category {
 
     public List<StoredMap> maps(byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending, int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, minSorter, maxSorter, anyOfTags, ascending, from, size));
-        ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
+        ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
             ret.add(map);
         }
@@ -368,7 +374,7 @@ public class Category {
 
     public List<StoredMap> maps(String textQuery, String[] anyOfTags, int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, anyOfTags, from, size));
-        ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
+        ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
             ret.add(map);
         }
@@ -377,7 +383,7 @@ public class Category {
 
     public List<StoredMap> maps(String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending, int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, minSorter, maxSorter, anyOfTags, ascending, from, size));
-        ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
+        ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
             ret.add(map);
         }
@@ -386,7 +392,7 @@ public class Category {
 
     public List<StoredMap> maps(String textQuery, byte[] minSorter, byte[] maxSorter, boolean ascending, int from, int size) {
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, minSorter, maxSorter, ascending, from, size));
-        ArrayList<StoredMap> ret = new ArrayList<>((int) (size * .8));
+        ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
             ret.add(map);
         }
@@ -414,6 +420,488 @@ public class Category {
             return false;
         }
         return Objects.equals(this._store, other._store);
+    }
+
+    //map api
+    @Override
+    public int size() {
+        return _driver.count(_indexName, _connection);
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return size() <= 0;
+    }
+
+    @Override
+    public boolean containsKey(Object key) {
+        if (key instanceof String) {
+            return _driver.get((String) key, _indexName, _connection) != null;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean containsValue(Object value) {
+        if (value instanceof StoredMap) {
+            return ((StoredMap) value).category().equals(Category.this);
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public Map<String, Object> get(Object key) {
+        if (key instanceof String) {
+            StoredMap sm = map((String) key);
+            if (sm.isEmpty()) {
+                return null;
+            } else {
+                return sm;
+            }
+        } else {
+            return null;
+        }
+    }
+
+    @Override
+    public synchronized Map<String, Object> put(String key, Map<String, Object> value) {
+        StoredMap sm = map(key);
+        Map<String, Object> ret;
+        if (!sm.isEmpty()) {
+            ret = Collections.unmodifiableMap(new HashMap<>(sm));
+            sm.clear();
+        } else {
+            ret = null;
+        }
+        sm.putAll(value);
+        return ret;
+    }
+
+    @Override
+    public synchronized Map<String, Object> remove(Object key) {
+        if (key instanceof String) {
+            StoredMap sm = map((String) key);
+            Map<String, Object> ret;
+            if (!sm.isEmpty()) {
+                ret = Collections.unmodifiableMap(new HashMap<>(sm));
+            } else {
+                ret = null;
+            }
+            sm.remove();
+            return ret;
+        } else {
+            return null;
+        }
+
+    }
+
+    @Override
+    public void putAll(Map<? extends String, ? extends Map<String, Object>> m) {
+        for (Entry<? extends String, ? extends Map<String, Object>> entry : m.entrySet()) {
+            put(entry.getKey(), entry.getValue());
+        }
+    }
+
+    @Override
+    public synchronized void clear() {
+        _driver.removeAll(_indexName, _connection);
+    }
+
+    @Override
+    public Set<String> keySet() {
+        return new Set<String>() {
+            @Override
+            public int size() {
+                return Category.this.size();
+            }
+
+            @Override
+            public boolean isEmpty() {
+                return Category.this.isEmpty();
+            }
+
+            @Override
+            public boolean contains(Object o) {
+                return Category.this.containsKey(o);
+            }
+
+            @Override
+            public Iterator<String> iterator() {
+
+                Iterator<StoredMap> i = Category.this.maps().iterator();
+
+                return new Iterator<String>() {
+
+                    @Override
+                    public boolean hasNext() {
+                        return i.hasNext();
+                    }
+
+                    @Override
+                    public String next() {
+                        return i.next().key();
+                    }
+                };
+            }
+
+            @Override
+            public Object[] toArray() {
+                ArrayList ret = new ArrayList();
+                Iterator<String> i = iterator();
+                while (i.hasNext()) {
+                    ret.add(i.next());
+                }
+                return ret.toArray();
+            }
+
+            @Override
+            public <T> T[] toArray(T[] arg0) {
+                ArrayList<T> ret = new ArrayList<>();
+                Iterator<String> i = iterator();
+                while (i.hasNext()) {
+                    ret.add((T) i.next());
+                }
+                return ret.toArray(arg0);
+            }
+
+            @Override
+            public boolean add(String e) {
+                return true;
+            }
+
+            @Override
+            public boolean remove(Object o) {
+                return Category.this.remove(o) != null;
+            }
+
+            @Override
+            public boolean containsAll(Collection<?> c) {
+                for (Object o : c) {
+                    if (!Category.this.containsKey(o)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            @Override
+            public boolean addAll(Collection<? extends String> c) {
+                return true;
+            }
+
+            @Override
+            public boolean retainAll(Collection<?> c) {
+
+                String[] currentKeys = toArray(new String[0]);
+                boolean ret = false;
+                for (String key : currentKeys) {
+                    if (!c.contains(key)) {
+                        Category.this.remove(key);
+                        ret = true;
+                    }
+                }
+                return ret;
+            }
+
+            @Override
+            public boolean removeAll(Collection<?> c) {
+                boolean ret = false;
+                for (Object o : c) {
+                    if (Category.this.remove(o) != null) {
+                        ret = true;
+                    }
+                }
+                return ret;
+            }
+
+            @Override
+            public void clear() {
+                Category.this.clear();
+            }
+        };
+    }
+
+    @Override
+    public Collection<Map<String, Object>> values() {
+        return new Collection<Map<String, Object>>() {
+            @Override
+            public int size() {
+                return Category.this.size();
+            }
+
+            @Override
+            public boolean isEmpty() {
+                return Category.this.isEmpty();
+            }
+
+            @Override
+            public boolean contains(Object o) {
+                return Category.this.containsValue(o);
+            }
+
+            @Override
+            public Iterator<Map<String, Object>> iterator() {
+                Iterator<StoredMap> i = Category.this.maps().iterator();
+
+                return new Iterator<Map<String, Object>>() {
+
+                    @Override
+                    public boolean hasNext() {
+                        return i.hasNext();
+                    }
+
+                    @Override
+                    public Map<String, Object> next() {
+                        return i.next();
+                    }
+                };
+            }
+
+            @Override
+            public Object[] toArray() {
+                ArrayList ret = new ArrayList();
+                Iterator<Map<String, Object>> i = iterator();
+                while (i.hasNext()) {
+                    ret.add(i.next());
+                }
+                return ret.toArray();
+            }
+
+            @Override
+            public <T> T[] toArray(T[] arg0) {
+                ArrayList<T> ret = new ArrayList<>();
+                Iterator<Map<String, Object>> i = iterator();
+                while (i.hasNext()) {
+                    ret.add((T) i.next());
+                }
+                return ret.toArray(arg0);
+            }
+
+            @Override
+            public boolean add(Map<String, Object> e) {
+                throw new UnsupportedOperationException("Adding a map to category without any key is not supported.");
+            }
+
+            @Override
+            public boolean remove(Object o) {
+                boolean ret = false;
+                if (o instanceof StoredMap) {
+                    StoredMap sm = (StoredMap) o;
+                    if (sm.category().equals(Category.this)) {
+                        sm.remove();
+                        ret = true;
+                    }
+                }
+                return ret;
+            }
+
+            @Override
+            public boolean containsAll(Collection<?> c) {
+                for (Object o : c) {
+                    if (!Category.this.containsValue(o)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            @Override
+            public boolean addAll(Collection<? extends Map<String, Object>> c) {
+                throw new UnsupportedOperationException("Adding maps to category without keys is not supported.");
+            }
+
+            @Override
+            public boolean removeAll(Collection<?> c) {
+                boolean ret = false;
+                for (Object o : c) {
+                    if (o instanceof StoredMap) {
+                        StoredMap sm = (StoredMap) o;
+                        if (sm.category().equals(Category.this)) {
+                            sm.remove();
+                            ret = true;
+                        }
+                    }
+                }
+                return ret;
+            }
+
+            @Override
+            public boolean retainAll(Collection<?> c) {
+                HashSet<String> keysToRetain = new HashSet<>();
+                for (Object o : c) {
+                    if (!(o instanceof StoredMap)) {
+                        return false;
+                    } else {
+                        keysToRetain.add(((StoredMap) o).key());
+                    }
+                }
+                StoredMap[] currentValues = toArray(new StoredMap[0]);
+                boolean ret = false;
+                for (StoredMap map : currentValues) {
+                    if (!keysToRetain.contains(map.key())) {
+                        map.remove();
+                        ret = true;
+                    }
+                }
+                return ret;
+            }
+
+            @Override
+            public void clear() {
+                Category.this.clear();
+            }
+        };
+    }
+
+    @Override
+    public Set<Entry<String, Map<String, Object>>> entrySet() {
+        return new Set<Entry<String, Map<String, Object>>>() {
+            @Override
+            public int size() {
+                return Category.this.size();
+            }
+
+            @Override
+            public boolean isEmpty() {
+                return Category.this.isEmpty();
+            }
+
+            @Override
+            public boolean contains(Object o) {
+                if (o instanceof Entry) {
+                    Entry e = (Entry) o;
+                    Object v = e.getValue();
+                    if (v instanceof StoredMap) {
+                        StoredMap sm = (StoredMap) v;
+                        if (sm.category().equals(Category.this)) {
+                            return sm.key().equals(e.getKey());
+                        } else {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            }
+
+            @Override
+            public Iterator<Entry<String, Map<String, Object>>> iterator() {
+
+                Iterator<Map<String, Object>> i = Category.this.values().iterator();
+
+                return new Iterator<Entry<String, Map<String, Object>>>() {
+                    @Override
+                    public boolean hasNext() {
+                        return i.hasNext();
+                    }
+
+                    @Override
+                    public Entry<String, Map<String, Object>> next() {
+
+                        StoredMap sm = (StoredMap) i.next();
+
+                        return new Entry<String, Map<String, Object>>() {
+                            @Override
+                            public String getKey() {
+                                return sm.key();
+                            }
+
+                            @Override
+                            public Map<String, Object> getValue() {
+                                return sm;
+                            }
+
+                            @Override
+                            public Map<String, Object> setValue(Map<String, Object> value) {
+                                return Category.this.put(sm.key(), value);
+                            }
+                        };
+                    }
+                };
+            }
+
+            @Override
+            public Object[] toArray() {
+                ArrayList ret = new ArrayList();
+                for (Entry<String, Map<String, Object>> entry : entrySet()) {
+                    ret.add(entry);
+                }
+                return ret.toArray();
+            }
+
+            @Override
+            public <T> T[] toArray(T[] arg0) {
+                ArrayList<T> ret = new ArrayList<>();
+                for (Entry<String, Map<String, Object>> entry : entrySet()) {
+                    ret.add((T) entry);
+                }
+                return ret.toArray(arg0);
+            }
+
+            @Override
+            public boolean add(Entry<String, Map<String, Object>> e) {
+                Category.this.put(e.getKey(), e.getValue());
+                return true;
+            }
+
+            @Override
+            public boolean remove(Object o) {
+                if (o instanceof Entry) {
+                    Category.this.remove(((Entry) o).getKey());
+                    return true;
+                }
+                return false;
+            }
+
+            @Override
+            public boolean containsAll(Collection<?> c) {
+                for (Object o : c) {
+                    if (!Category.this.values().contains(o)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            @Override
+            public boolean addAll(Collection<? extends Entry<String, Map<String, Object>>> c) {
+                boolean ret = false;
+                for (Entry e : c) {
+                    if (add(e)) {
+                        ret = true;
+                    }
+                }
+                return ret;
+            }
+
+            @Override
+            public boolean retainAll(Collection<?> c) {
+                throw new UnsupportedOperationException("Not supported yet.");
+            }
+
+            @Override
+            public boolean removeAll(Collection<?> c) {
+                boolean ret = false;
+                for (Object o : c) {
+                    if (o instanceof Entry) {
+                        Entry e = (Entry) o;
+                        if (Category.this.remove(e.getKey()) != null) {
+                            ret = true;
+                        }
+                    }
+                }
+                return ret;
+            }
+
+            @Override
+            public void clear() {
+                Category.this.clear();
+            }
+        };
     }
 
 }

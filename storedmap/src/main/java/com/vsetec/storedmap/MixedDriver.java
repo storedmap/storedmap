@@ -212,8 +212,56 @@ public class MixedDriver implements Driver<MixedDriver.MixedConnection> {
     public Iterable<String> getIndices(MixedConnection connection) {
         return connection._mainDriver.getIndices(connection);
     }
-    
-    
+
+    @Override
+    public int count(String indexName, MixedConnection connection) {
+        return connection._fulltextDriver.count(indexName, connection._mainConnection);
+    }
+
+    @Override
+    public int count(String indexName, MixedConnection connection, String[] anyOfTags) {
+        return connection._fulltextDriver.count(indexName, connection._mainConnection, anyOfTags);
+    }
+
+    @Override
+    public int count(String indexName, MixedConnection connection, byte[] minSorter, byte[] maxSorter) {
+        return connection._fulltextDriver.count(indexName, connection._mainConnection, minSorter, maxSorter);
+    }
+
+    @Override
+    public int count(String indexName, MixedConnection connection, String textQuery) {
+        return connection._fulltextDriver.count(indexName, connection._mainConnection, textQuery);
+
+    }
+
+    @Override
+    public int count(String indexName, MixedConnection connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags) {
+        return connection._fulltextDriver.count(indexName, connection._mainConnection, minSorter, maxSorter, anyOfTags);
+    }
+
+    @Override
+    public int count(String indexName, MixedConnection connection, String textQuery, String[] anyOfTags) {
+        return connection._fulltextDriver.count(indexName, connection._mainConnection, textQuery, anyOfTags);
+
+    }
+
+    @Override
+    public int count(String indexName, MixedConnection connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags) {
+        return connection._fulltextDriver.count(indexName, connection._mainConnection, textQuery, minSorter, maxSorter, anyOfTags);
+    }
+
+    @Override
+    public int count(String indexName, MixedConnection connection, String textQuery, byte[] minSorter, byte[] maxSorter) {
+        return connection._fulltextDriver.count(indexName, connection._mainConnection, textQuery, minSorter, maxSorter);
+
+    }
+
+    @Override
+    public synchronized void removeAll(String indexName, MixedConnection connection) {
+        connection._fulltextDriver.removeAll(indexName, connection);
+        connection._mainDriver.removeAll(indexName, connection);
+
+    }
 
     public static class MixedConnection<I, F> {
 

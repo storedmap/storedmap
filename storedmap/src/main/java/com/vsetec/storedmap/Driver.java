@@ -127,6 +127,22 @@ public interface Driver<T> {
      */
     byte[] get(String key, String indexName, T connection);
 
+    int count(String indexName, T connection);
+
+    int count(String indexName, T connection, String[] anyOfTags);
+
+    int count(String indexName, T connection, byte[] minSorter, byte[] maxSorter);
+
+    int count(String indexName, T connection, String textQuery);
+
+    int count(String indexName, T connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags);
+
+    int count(String indexName, T connection, String textQuery, String[] anyOfTags);
+
+    int count(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags);
+
+    int count(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter);
+
     /**
      * Gets keys of all {@link StoredMap}s in the index.
      *
@@ -243,7 +259,9 @@ public interface Driver<T> {
             Runnable callbackAfterAdditionalIndex);
 
     void remove(String key, String indexName, T connection, Runnable callback);
-    
-    Iterable<String>getIndices(T connection);
+
+    void removeAll(String indexName, T connection);
+
+    Iterable<String> getIndices(T connection);
 
 }
