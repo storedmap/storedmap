@@ -32,6 +32,14 @@ import java.util.Properties;
  * object.</p>
  *
  * <p>
+ * The {@code indexName} parameter that is expected at the most of data
+ * manipulation methods is guaranteed to be a {@link String} containing only the
+ * basic Latin characters, numbers and, possibly, underscore signs ('_'), and to
+ * be no longer then the return value of
+ * {@link #getMaximumIndexNameLength(java.lang.Object)}. It is shortened and
+ * transformed to a Base32 string by the Library if needed.</p>
+ *
+ * <p>
  * The library doesn't do anything with the connection object except providing
  * it intact to the get, put and remove methods of the Driver, so it can be an
  * object of any type that will let the Driver implementation perform the needed

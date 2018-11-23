@@ -73,23 +73,27 @@ public class MapData implements Serializable {
     }
 
     byte[] getSorterAsBytes(Collator collator, int maximumSorterLength) {
-        if (_sorterObject[0] == null) {
+        return translateSorterIntoBytes(_sorterObject[0], collator, maximumSorterLength);
+    }
+    
+    static byte[] translateSorterIntoBytes(Object sorterObject, Collator collator, int maximumSorterLength) {
+        if (sorterObject == null) {
             return null;
-        } else if (_sorterObject[0] instanceof String) {
-            String sorter = (String) _sorterObject[0];
+        } else if (sorterObject instanceof String) {
+            String sorter = (String) sorterObject;
             CollationKey ck = collator.getCollationKey(sorter);
             byte[] arr = ck.toByteArray();
             return arr;
-        } else if (_sorterObject[0] instanceof Instant) {
-            Instant sorter = (Instant) _sorterObject[0];
+        } else if (sorterObject instanceof Instant) {
+            Instant sorter = (Instant) sorterObject;
 
             String timeString = ((Instant) sorter).toString();
-            _sorterObject[0] = sorter;
+            sorterObject = sorter;
             byte[] bytes = timeString.getBytes(StandardCharsets.US_ASCII);
             return bytes;
 
-        } else if (_sorterObject[0] instanceof Number) {
-            Number sorter = (Number) _sorterObject[0];
+        } else if (sorterObject instanceof Number) {
+            Number sorter = (Number) sorterObject;
 
             byte[] gazillionByteRepresentation = new byte[maximumSorterLength - 1];
             gazillionByteRepresentation[0] = Byte.MAX_VALUE;
@@ -128,8 +132,8 @@ public class MapData implements Serializable {
             byte[] bytesRet = new byte[latestZero];
             System.arraycopy(bytesB, 0, bytesRet, 0, latestZero);
             return bytesRet;
-        } else if (_sorterObject[0] instanceof Serializable) {
-            return SerializationUtils.serialize((Serializable) _sorterObject[0]);
+        } else if (sorterObject instanceof Serializable) {
+            return SerializationUtils.serialize((Serializable) sorterObject);
         } else {
             return new byte[0];
         }
