@@ -34,7 +34,7 @@ public class Util {
 
     private static final Base32 _b = new Base32(true, (byte) '*');
 
-    static byte[] translateSorterIntoBytes(Object sorterObject, Collator collator, int maximumSorterLength) {
+    public static byte[] translateSorterIntoBytes(Object sorterObject, Collator collator, int maximumSorterLength) {
         if (sorterObject == null) {
             return null;
         } else if (sorterObject instanceof String) {
@@ -59,37 +59,40 @@ public class Util {
                 gazillionByteRepresentation[i] = -1;
             } // making 7fffffffffffffffffffffff...
             BigInteger biggestInteger = new BigInteger(gazillionByteRepresentation);
+            int biggestIntegerLength = biggestInteger.toString().length();
 
             Number number = (Number) sorter;
             BigDecimal bd = new BigDecimal(number.toString());  //123.456
-            bd = bd.movePointRight(maximumSorterLength / 2);     //123456000000. 
-            BigInteger bi = bd.toBigInteger();                  //123456000000 - discard everything after decimal point
+            bd = bd.movePointRight(biggestIntegerLength / 2);     //123456000000.  - move point right for the half of the allowed number size
+            BigInteger bi = bd.toBigInteger();                  //123456000000 - discard everything after decimal point as it is too far from the half of the allowed number size
             if (bi.signum() > 1 && bi.compareTo(biggestInteger) > 1) { // ignore values too big
                 bi = biggestInteger;
             } else if (bi.signum() < 1 && bi.abs().compareTo(biggestInteger) > 1) { // or too negative big
                 bi = biggestInteger.negate();
             }
 
-            bi = bi.add(biggestInteger);                        // now it's always positive
+            bi = bi.add(biggestInteger);                        // now it's always positive. we are no afraid to overspill as the biggest integer is one byte shorter then the really allowed
             byte[] bytes = bi.toByteArray();
             byte[] bytesB = new byte[maximumSorterLength];     // byte array of the desired length
-            int latestZero = maximumSorterLength;
-            boolean metNonZero = false;
-            for (int i = bytes.length - 1, y = bytesB.length - 1; y >= 0; i--, y--) { // fill it from the end; leading zeroes will remain
+            //int latestZero = maximumSorterLength;
+            //boolean metNonZero = false;
+            for (int i = bytes.length - 1, y = bytesB.length - 1; i >= 0; i--, y--) { // fill it from the end; leading zeroes will remain
                 bytesB[y] = bytes[i];
                 // look for latest zero
-                if (!metNonZero) {
-                    if (bytes[i] == 0) {
-                        latestZero = y;
-                    } else {
-                        metNonZero = true;
-                    }
-                }
+                //if (!metNonZero) {
+                //    if (bytes[i] == 0) {
+                //        latestZero = y;
+                //    } else {
+                //        metNonZero = true;
+                //    }
+                //}
             }
+
+            return bytesB;
             // crop the trailing zeroes (if we have some)
-            byte[] bytesRet = new byte[latestZero];
-            System.arraycopy(bytesB, 0, bytesRet, 0, latestZero);
-            return bytesRet;
+            //byte[] bytesRet = new byte[latestZero];
+            //System.arraycopy(bytesB, 0, bytesRet, 0, latestZero);
+            //return bytesRet;
         } else if (sorterObject instanceof Serializable) {
             return SerializationUtils.serialize((Serializable) sorterObject);
         } else {
@@ -134,6 +137,9 @@ public class Util {
         String trAppCode = getRidOfNonLatin(store.applicationCode()) + "_";
         String indexIndexStorageName = trAppCode + "_indices";
 
+        if (!translated.startsWith(trAppCode)) {
+            return null;
+        }
         // remove the app prefix
         ret = translated.substring(trAppCode.length());
 

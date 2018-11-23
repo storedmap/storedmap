@@ -87,6 +87,7 @@ public class Persister {
                 // wait for releasing on other machines then lock for ourselves
                 while ((waitForLock = _store.getDriver().tryLock(holder.getKey(), storedMap.category().internalIndexName(), _store.getConnection(), 100000)) > 0) {
                     try {
+                        System.out.println("Waiting " + storedMap.category().internalIndexName() + " for " + waitForLock);
                         holder.wait(waitForLock > 5000 ? 2000 : waitForLock); // check every 2 seconds
                     } catch (InterruptedException ex) {
                         throw new RuntimeException("Unexpected interruption", ex);
