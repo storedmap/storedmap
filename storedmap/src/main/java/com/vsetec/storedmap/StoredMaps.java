@@ -74,7 +74,7 @@ public class StoredMaps implements Iterable<StoredMap> {
             public StoredMap next() {
                 String nextKey;
                 try {
-                    
+
                     nextKey = _i.next();
                     if (!_switched && !_keyCache.isEmpty()) { // skipping all cached
                         _keyCache.remove(nextKey);

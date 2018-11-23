@@ -214,44 +214,44 @@ public class MixedDriver implements Driver<MixedDriver.MixedConnection> {
     }
 
     @Override
-    public int count(String indexName, MixedConnection connection) {
+    public long count(String indexName, MixedConnection connection) {
         return connection._fulltextDriver.count(indexName, connection._mainConnection);
     }
 
     @Override
-    public int count(String indexName, MixedConnection connection, String[] anyOfTags) {
+    public long count(String indexName, MixedConnection connection, String[] anyOfTags) {
         return connection._fulltextDriver.count(indexName, connection._mainConnection, anyOfTags);
     }
 
     @Override
-    public int count(String indexName, MixedConnection connection, byte[] minSorter, byte[] maxSorter) {
+    public long count(String indexName, MixedConnection connection, byte[] minSorter, byte[] maxSorter) {
         return connection._fulltextDriver.count(indexName, connection._mainConnection, minSorter, maxSorter);
     }
 
     @Override
-    public int count(String indexName, MixedConnection connection, String textQuery) {
+    public long count(String indexName, MixedConnection connection, String textQuery) {
         return connection._fulltextDriver.count(indexName, connection._mainConnection, textQuery);
 
     }
 
     @Override
-    public int count(String indexName, MixedConnection connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags) {
+    public long count(String indexName, MixedConnection connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags) {
         return connection._fulltextDriver.count(indexName, connection._mainConnection, minSorter, maxSorter, anyOfTags);
     }
 
     @Override
-    public int count(String indexName, MixedConnection connection, String textQuery, String[] anyOfTags) {
+    public long count(String indexName, MixedConnection connection, String textQuery, String[] anyOfTags) {
         return connection._fulltextDriver.count(indexName, connection._mainConnection, textQuery, anyOfTags);
 
     }
 
     @Override
-    public int count(String indexName, MixedConnection connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags) {
+    public long count(String indexName, MixedConnection connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags) {
         return connection._fulltextDriver.count(indexName, connection._mainConnection, textQuery, minSorter, maxSorter, anyOfTags);
     }
 
     @Override
-    public int count(String indexName, MixedConnection connection, String textQuery, byte[] minSorter, byte[] maxSorter) {
+    public long count(String indexName, MixedConnection connection, String textQuery, byte[] minSorter, byte[] maxSorter) {
         return connection._fulltextDriver.count(indexName, connection._mainConnection, textQuery, minSorter, maxSorter);
 
     }

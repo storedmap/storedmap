@@ -75,7 +75,7 @@ public class MapData implements Serializable {
     byte[] getSorterAsBytes(Collator collator, int maximumSorterLength) {
         return translateSorterIntoBytes(_sorterObject[0], collator, maximumSorterLength);
     }
-    
+
     static byte[] translateSorterIntoBytes(Object sorterObject, Collator collator, int maximumSorterLength) {
         if (sorterObject == null) {
             return null;

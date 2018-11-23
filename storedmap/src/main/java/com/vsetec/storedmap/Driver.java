@@ -40,12 +40,19 @@ import java.util.Properties;
  * transformed to a Base32 string by the Library if needed.</p>
  *
  * <p>
+ * The Driver is responsible for automatic creation of the actual tables or
+ * indices in the underlying data storage at the first attempt of accessing
+ * them. The list of index names already created for the connection is retrieved
+ * with the {@link #getIndices(java.lang.Object) method.</p>
+ *
+ * <p>
  * The library doesn't do anything with the connection object except providing
  * it intact to the get, put and remove methods of the Driver, so it can be an
  * object of any type that will let the Driver implementation perform the needed
  * command.</p>
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
+ *
  * @param <T> Type of the connection object
  */
 public interface Driver<T> {
@@ -135,21 +142,21 @@ public interface Driver<T> {
      */
     byte[] get(String key, String indexName, T connection);
 
-    int count(String indexName, T connection);
+    long count(String indexName, T connection);
 
-    int count(String indexName, T connection, String[] anyOfTags);
+    long count(String indexName, T connection, String[] anyOfTags);
 
-    int count(String indexName, T connection, byte[] minSorter, byte[] maxSorter);
+    long count(String indexName, T connection, byte[] minSorter, byte[] maxSorter);
 
-    int count(String indexName, T connection, String textQuery);
+    long count(String indexName, T connection, String textQuery);
 
-    int count(String indexName, T connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags);
+    long count(String indexName, T connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags);
 
-    int count(String indexName, T connection, String textQuery, String[] anyOfTags);
+    long count(String indexName, T connection, String textQuery, String[] anyOfTags);
 
-    int count(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags);
+    long count(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags);
 
-    int count(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter);
+    long count(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter);
 
     /**
      * Gets keys of all {@link StoredMap}s in the index.
@@ -270,6 +277,19 @@ public interface Driver<T> {
 
     void removeAll(String indexName, T connection);
 
+    /**
+     * Return the index names that can be provided as a parameter of data
+     * manipulation methods.
+     *
+     * <p>
+     * This will be an internal index names that conform with the general rule:
+     * only basic Latin charachters are used and the number of characters is no
+     * longer then the number returned by
+     * {@link #getMaximumIndexNameLength(java.lang.Object)} method.</p>
+     *
+     * @param connection object that represents the connection
+     * @return iterable of index names
+     */
     Iterable<String> getIndices(T connection);
 
 }

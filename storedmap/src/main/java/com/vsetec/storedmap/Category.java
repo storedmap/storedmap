@@ -694,7 +694,7 @@ public class Category implements Map<String, Map<String, Object>> {
      *
      * @return number of StoredMaps in the Category
      */
-    public int count() {
+    public long count() {
         return _driver.count(_indexName, _connection);
     }
 
@@ -714,7 +714,7 @@ public class Category implements Map<String, Map<String, Object>> {
      * @param anyOfTags array of tag Strings
      * @return number of StoredMaps in the Category
      */
-    public int count(String textQuery, Object minSorter, Object maxSorter, String[] anyOfTags) {
+    public long count(String textQuery, Object minSorter, Object maxSorter, String[] anyOfTags) {
         byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return _driver.count(_indexName, _connection, textQuery, min, max, anyOfTags);
@@ -734,7 +734,7 @@ public class Category implements Map<String, Map<String, Object>> {
      * @param anyOfTags array of tag Strings
      * @return number of StoredMaps in the Category
      */
-    public int count(Object minSorter, Object maxSorter, String[] anyOfTags) {
+    public long count(Object minSorter, Object maxSorter, String[] anyOfTags) {
         byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return _driver.count(_indexName, _connection, min, max, anyOfTags);
@@ -752,7 +752,7 @@ public class Category implements Map<String, Map<String, Object>> {
      * @param anyOfTags array of tag Strings
      * @return number of StoredMaps in the Category
      */
-    public int count(String textQuery, String[] anyOfTags) {
+    public long count(String textQuery, String[] anyOfTags) {
         return _driver.count(_indexName, _connection, textQuery, anyOfTags);
     }
 
@@ -770,7 +770,7 @@ public class Category implements Map<String, Map<String, Object>> {
      * @param maxSorter maximum value of Sorter
      * @return number of StoredMaps in the Category
      */
-    public int count(String textQuery, Object minSorter, Object maxSorter) {
+    public long count(String textQuery, Object minSorter, Object maxSorter) {
         byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return _driver.count(_indexName, _connection, textQuery, min, max);
@@ -786,7 +786,7 @@ public class Category implements Map<String, Map<String, Object>> {
      * @param anyOfTags array of tag Strings
      * @return number of StoredMaps in the Category
      */
-    public int count(String[] anyOfTags) {
+    public long count(String[] anyOfTags) {
         return _driver.count(_indexName, _connection, anyOfTags);
     }
 
@@ -800,7 +800,7 @@ public class Category implements Map<String, Map<String, Object>> {
      * @param textQuery a database-specific query in textual form
      * @return number of StoredMaps in the Category
      */
-    public int count(String textQuery) {
+    public long count(String textQuery) {
         return _driver.count(_indexName, _connection, textQuery);
     }
 
@@ -816,7 +816,7 @@ public class Category implements Map<String, Map<String, Object>> {
      * @param maxSorter maximum value of Sorter
      * @return number of StoredMaps in the Category
      */
-    public int count(Object minSorter, Object maxSorter) {
+    public long count(Object minSorter, Object maxSorter) {
         byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return _driver.count(_indexName, _connection, min, max);
@@ -827,7 +827,12 @@ public class Category implements Map<String, Map<String, Object>> {
     // **********************************
     @Override
     public int size() {
-        return count();
+        long count = count();
+        if (count > Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        } else {
+            return (int) count;
+        }
     }
 
     @Override
