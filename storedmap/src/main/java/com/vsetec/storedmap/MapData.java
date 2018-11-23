@@ -73,70 +73,7 @@ public class MapData implements Serializable {
     }
 
     byte[] getSorterAsBytes(Collator collator, int maximumSorterLength) {
-        return translateSorterIntoBytes(_sorterObject[0], collator, maximumSorterLength);
-    }
-
-    static byte[] translateSorterIntoBytes(Object sorterObject, Collator collator, int maximumSorterLength) {
-        if (sorterObject == null) {
-            return null;
-        } else if (sorterObject instanceof String) {
-            String sorter = (String) sorterObject;
-            CollationKey ck = collator.getCollationKey(sorter);
-            byte[] arr = ck.toByteArray();
-            return arr;
-        } else if (sorterObject instanceof Instant) {
-            Instant sorter = (Instant) sorterObject;
-
-            String timeString = ((Instant) sorter).toString();
-            sorterObject = sorter;
-            byte[] bytes = timeString.getBytes(StandardCharsets.US_ASCII);
-            return bytes;
-
-        } else if (sorterObject instanceof Number) {
-            Number sorter = (Number) sorterObject;
-
-            byte[] gazillionByteRepresentation = new byte[maximumSorterLength - 1];
-            gazillionByteRepresentation[0] = Byte.MAX_VALUE;
-            for (int i = 1; i < gazillionByteRepresentation.length; i++) {
-                gazillionByteRepresentation[i] = -1;
-            } // making 7fffffffffffffffffffffff...
-            BigInteger biggestInteger = new BigInteger(gazillionByteRepresentation);
-
-            Number number = (Number) sorter;
-            BigDecimal bd = new BigDecimal(number.toString());  //123.456
-            bd = bd.movePointRight(maximumSorterLength / 2);     //123456000000. 
-            BigInteger bi = bd.toBigInteger();                  //123456000000 - discard everything after decimal point
-            if (bi.signum() > 1 && bi.compareTo(biggestInteger) > 1) { // ignore values too big
-                bi = biggestInteger;
-            } else if (bi.signum() < 1 && bi.abs().compareTo(biggestInteger) > 1) { // or too negative big
-                bi = biggestInteger.negate();
-            }
-
-            bi = bi.add(biggestInteger);                        // now it's always positive
-            byte[] bytes = bi.toByteArray();
-            byte[] bytesB = new byte[maximumSorterLength];     // byte array of the desired length
-            int latestZero = maximumSorterLength;
-            boolean metNonZero = false;
-            for (int i = bytes.length - 1, y = bytesB.length - 1; y >= 0; i--, y--) { // fill it from the end; leading zeroes will remain
-                bytesB[y] = bytes[i];
-                // look for latest zero
-                if (!metNonZero) {
-                    if (bytes[i] == 0) {
-                        latestZero = y;
-                    } else {
-                        metNonZero = true;
-                    }
-                }
-            }
-            // crop the trailing zeroes (if we have some)
-            byte[] bytesRet = new byte[latestZero];
-            System.arraycopy(bytesB, 0, bytesRet, 0, latestZero);
-            return bytesRet;
-        } else if (sorterObject instanceof Serializable) {
-            return SerializationUtils.serialize((Serializable) sorterObject);
-        } else {
-            return new byte[0];
-        }
+        return Util.translateSorterIntoBytes(_sorterObject[0], collator, maximumSorterLength);
     }
 
     @Override

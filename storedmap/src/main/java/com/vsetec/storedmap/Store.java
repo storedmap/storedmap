@@ -17,9 +17,11 @@ package com.vsetec.storedmap;
 
 import java.io.Closeable;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * A database representation.
@@ -167,6 +169,15 @@ public class Store implements Closeable {
         if (ret == null) {
             ret = new Category(this, categoryName);
             _categories.put(categoryName, ret);
+        }
+        return ret;
+    }
+
+    public Set<Category> categories() {
+        Iterable<String> cats = _driver.getIndices(_connection);
+        Set<Category> ret = new HashSet<>();
+        for (String cat : cats) {
+            ret.add(get(Util.transformIndexNameToCategoryName(_driver, this, _connection, cat)));
         }
         return ret;
     }

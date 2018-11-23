@@ -43,7 +43,7 @@ import java.util.Properties;
  * The Driver is responsible for automatic creation of the actual tables or
  * indices in the underlying data storage at the first attempt of accessing
  * them. The list of index names already created for the connection is retrieved
- * with the {@link #getIndices(java.lang.Object) method.</p>
+ * with the {@link #getIndices(java.lang.Object)} method.</p>
  *
  * <p>
  * The library doesn't do anything with the connection object except providing
@@ -237,7 +237,8 @@ public interface Driver<T> {
      * @param connection object that represents the connection
      * @param milliseconds the maximum amount of time the new lock is active
      * before it will be automatically considered to be released
-     * @return
+     * @return number of milliseconds left to wait or a zero or negative value
+     * if lock was performed
      */
     int tryLock(String key, String indexName, T connection, int milliseconds);
 

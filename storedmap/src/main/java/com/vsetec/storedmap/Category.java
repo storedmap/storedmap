@@ -99,10 +99,10 @@ public class Category implements Map<String, Map<String, Object>> {
         _driver = store.getDriver();
 
         String indexName = store.applicationCode() + "_" + name;
-        _indexName = _translateIndexName(indexName);
+        _indexName = Util.transformCategoryNameToIndexName(_driver, _store, _connection, _name, indexName);
 
         // get category locales
-        String localesIndexStorageName = _translate(_store.applicationCode()) + "__locales";
+        String localesIndexStorageName = Util.getRidOfNonLatin(_store.applicationCode()) + "__locales";
         byte[] localesB = _driver.get(_indexName, localesIndexStorageName, _connection);
         Locale[] locales;
         if (localesB != null && localesB.length > 0) {
@@ -135,7 +135,7 @@ public class Category implements Map<String, Map<String, Object>> {
         _locales.addAll(Arrays.asList(locales));
 
         byte[] localesB = SerializationUtils.serialize(locales);
-        String localesIndexStorageName = _translate(_store.applicationCode()) + "__locales";
+        String localesIndexStorageName = Util.getRidOfNonLatin(_store.applicationCode()) + "__locales";
         _driver.put(_indexName, localesIndexStorageName, _connection, localesB, () -> {
         }, () -> {
         });
@@ -170,67 +170,6 @@ public class Category implements Map<String, Map<String, Object>> {
 
     public RuleBasedCollator collator() {
         return _collator;
-    }
-
-    private String _translate(String string) {
-        String trString;
-        if (!string.matches("^[a-z][a-z0-9_]*$")) {
-            Base32 b = new Base32(true, (byte) '*');
-            trString = b.encodeAsString(string.getBytes(StandardCharsets.UTF_8));
-            // strip the hell the padding
-            int starPos = trString.indexOf("*");
-            if (starPos > 0) {
-                trString = trString.substring(0, starPos);
-            }
-        } else {
-            trString = string;
-        }
-        return trString.toLowerCase();
-    }
-
-    private String _translateIndexName(String notTranslated) {
-        String trAppCode = _translate(_store.applicationCode());
-        String indexIndexStorageName = trAppCode + "__indices";
-
-        String trCatName = _translate(_name);
-
-        String indexName = trAppCode + "_" + trCatName;
-        if (indexName.length() > _driver.getMaximumIndexNameLength(_connection)) {
-            String indexId = null;
-
-            long waitForLock;
-            while ((waitForLock = _driver.tryLock("100", indexIndexStorageName, _connection, 10000)) > 0) {
-                try {
-                    Thread.sleep(waitForLock > 100 ? 100 : waitForLock);
-                } catch (InterruptedException ex) {
-                    throw new RuntimeException("Unexpected interruption", ex);
-                }
-            }
-            Iterable<String> indexIndices = _driver.get(indexIndexStorageName, _connection);
-            for (String indexIndexKey : indexIndices) {
-                byte[] indexIndex = _driver.get(indexIndexKey, indexIndexStorageName, _connection);
-                String indexIndexCandidate = new String(indexIndex, StandardCharsets.UTF_8);
-                if (notTranslated.equals(indexIndexCandidate)) {
-                    indexId = indexIndexKey;
-                    //break; -- don't break to deplete the iterable so it closes
-                }
-            }
-
-            if (indexId != null) {
-
-                _driver.unlock("100", indexIndexStorageName, _connection);
-
-            } else {
-                indexId = UUID.randomUUID().toString().replace("-", "");
-                _driver.put(indexId, indexIndexStorageName, _connection, notTranslated.getBytes(StandardCharsets.UTF_8), () -> {
-                }, () -> {
-                    _driver.unlock("100", indexIndexStorageName, _connection);
-                });
-
-            }
-            indexName = trAppCode + "_" + indexId;
-        }
-        return indexName;
     }
 
     /**
@@ -375,8 +314,8 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return iterable of Stored Maps
      */
     public Iterable<StoredMap> maps(Object minSorter, Object maxSorter, boolean ascending) {
-        byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return new StoredMaps(this, _driver.get(_indexName, _connection, min, max, ascending));
     }
 
@@ -412,8 +351,8 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return iterable of Stored Maps
      */
     public Iterable<StoredMap> maps(Object minSorter, Object maxSorter, String[] anyOfTags, boolean ascending) {
-        byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return new StoredMaps(this, _driver.get(_indexName, _connection, min, max, anyOfTags, ascending));
     }
 
@@ -453,8 +392,8 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return iterable of Stored Maps
      */
     public Iterable<StoredMap> maps(String textQuery, Object minSorter, Object maxSorter, String[] anyOfTags, boolean ascending) {
-        byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, min, max, anyOfTags, ascending));
     }
 
@@ -475,8 +414,8 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return iterable of Stored Maps
      */
     public Iterable<StoredMap> maps(String textQuery, Object minSorter, Object maxSorter, boolean ascending) {
-        byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, min, max, ascending));
     }
 
@@ -541,8 +480,8 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return list of Stored Maps
      */
     public List<StoredMap> maps(Object minSorter, Object maxSorter, boolean ascending, int from, int size) {
-        byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, min, max, ascending, from, size));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
@@ -592,8 +531,8 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return list of Stored Maps
      */
     public List<StoredMap> maps(Object minSorter, Object maxSorter, String[] anyOfTags, boolean ascending, int from, int size) {
-        byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, min, max, anyOfTags, ascending, from, size));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
@@ -644,8 +583,8 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return list of Stored Maps
      */
     public List<StoredMap> maps(String textQuery, Object minSorter, Object maxSorter, String[] anyOfTags, boolean ascending, int from, int size) {
-        byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, min, max, anyOfTags, ascending, from, size));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
@@ -673,8 +612,8 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return list of Stored Maps
      */
     public List<StoredMap> maps(String textQuery, Object minSorter, Object maxSorter, boolean ascending, int from, int size) {
-        byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, min, max, ascending, from, size));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
@@ -715,8 +654,8 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return number of StoredMaps in the Category
      */
     public long count(String textQuery, Object minSorter, Object maxSorter, String[] anyOfTags) {
-        byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return _driver.count(_indexName, _connection, textQuery, min, max, anyOfTags);
     }
 
@@ -735,8 +674,8 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return number of StoredMaps in the Category
      */
     public long count(Object minSorter, Object maxSorter, String[] anyOfTags) {
-        byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return _driver.count(_indexName, _connection, min, max, anyOfTags);
     }
 
@@ -771,8 +710,8 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return number of StoredMaps in the Category
      */
     public long count(String textQuery, Object minSorter, Object maxSorter) {
-        byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return _driver.count(_indexName, _connection, textQuery, min, max);
     }
 
@@ -817,8 +756,8 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return number of StoredMaps in the Category
      */
     public long count(Object minSorter, Object maxSorter) {
-        byte[] min = MapData.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = MapData.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return _driver.count(_indexName, _connection, min, max);
     }
 
