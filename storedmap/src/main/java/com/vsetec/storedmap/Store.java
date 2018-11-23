@@ -177,7 +177,10 @@ public class Store implements Closeable {
         Iterable<String> cats = _driver.getIndices(_connection);
         Set<Category> ret = new HashSet<>();
         for (String cat : cats) {
-            ret.add(get(Util.transformIndexNameToCategoryName(_driver, this, _connection, cat)));
+            cat = Util.transformIndexNameToCategoryName(_driver, this, _connection, cat);
+            if (cat != null) {
+                ret.add(get(cat));
+            }
         }
         return ret;
     }

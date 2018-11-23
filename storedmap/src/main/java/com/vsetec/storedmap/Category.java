@@ -190,7 +190,7 @@ public class Category implements Map<String, Map<String, Object>> {
         return _name;
     }
 
-    String getIndexName() {
+    public String internalIndexName() {
         return _indexName;
     }
 

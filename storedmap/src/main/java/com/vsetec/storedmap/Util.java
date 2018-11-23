@@ -99,7 +99,7 @@ public class Util {
 
     public static String getRidOfNonLatin(String string) {
         String trString;
-        if (!string.matches("^[a-z][a-z0-9_]*$") || string.endsWith("b32")) {
+        if (!string.matches("^[a-z][a-z0-9_]*$") || string.endsWith("w32")) {
 
             trString = _b.encodeAsString(string.getBytes(StandardCharsets.UTF_8));
             // strip the hell the padding
@@ -108,7 +108,7 @@ public class Util {
                 trString = trString.substring(0, starPos);
             }
 
-            trString = trString + "b32";
+            trString = trString + "w32";
         } else {
 
             trString = string;
@@ -118,7 +118,7 @@ public class Util {
     }
 
     public static String restoreNonLatin(String trString) {
-        if (trString.endsWith("b32")) {
+        if (trString.endsWith("w32")) {
             trString = trString.substring(0, trString.length() - 3).toUpperCase();
             String string = new String(_b.decode(trString), StandardCharsets.UTF_8);
             return string;
@@ -132,15 +132,22 @@ public class Util {
         String ret;
 
         String trAppCode = getRidOfNonLatin(store.applicationCode()) + "_";
-        String indexIndexStorageName = trAppCode + "__indices";
+        String indexIndexStorageName = trAppCode + "_indices";
 
         // remove the app prefix
         ret = translated.substring(trAppCode.length());
+
+        // an this point it may not start with "_"
+        if (ret.startsWith("_")) {
+            return null;
+        }
 
         // first look in the indices register
         byte[] cand = driver.get(ret, indexIndexStorageName, con);
         if (cand != null) {
             ret = new String(cand, StandardCharsets.UTF_8);
+            // remove app prefix again
+            ret = ret.substring(trAppCode.length());
         }
 
         // restore if it was base32ed

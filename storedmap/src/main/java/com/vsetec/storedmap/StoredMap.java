@@ -119,7 +119,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
             if (!_category.store().getPersister().isInWork(_holder)) {
                 long waitForLock;
                 // wait for releasing on other machines then lock for ourselves
-                while ((waitForLock = driver.tryLock(_holder.getKey(), _category.getIndexName(), store.getConnection(), 100000)) > 0) {
+                while ((waitForLock = driver.tryLock(_holder.getKey(), _category.internalIndexName(), store.getConnection(), 100000)) > 0) {
                     try {
                         _holder.wait(waitForLock > 5000 ? 2000 : waitForLock); // check every 2 seconds
                     } catch (InterruptedException ex) {
@@ -131,11 +131,11 @@ public class StoredMap implements Map<String, Object>, Serializable {
             isRemoved = true;
 
             _category.removeFromCache(_holder.getKey());
-            driver.remove(_holder.getKey(), _category.getIndexName(), store.getConnection(), new Runnable() {
+            driver.remove(_holder.getKey(), _category.internalIndexName(), store.getConnection(), new Runnable() {
                 @Override
                 public void run() {
                     synchronized (_holder) {
-                        driver.unlock(_holder.getKey(), _category.getIndexName(), store.getConnection());
+                        driver.unlock(_holder.getKey(), _category.internalIndexName(), store.getConnection());
                         _holder.notify();
                     }
                 }
@@ -150,7 +150,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
             if (map == null) {
                 String key = _holder.getKey();
                 Store store = _category.store();
-                byte[] mapB = store.getDriver().get(key, _category.getIndexName(), store.getConnection());
+                byte[] mapB = store.getDriver().get(key, _category.internalIndexName(), store.getConnection());
                 if (mapB != null) {
                     map = (MapData) SerializationUtils.deserialize(mapB);
                 } else {
