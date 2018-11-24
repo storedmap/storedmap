@@ -41,7 +41,6 @@ public class Persister {
             return new Thread(r, "StoredMapIndexer-" + _num);
         }
     });
-    //private final ExecutorService _additionalIndexer = Executors.newSingleThreadExecutor((Runnable r) -> new Thread(r, "AdditionalIndexPersister"));
 
     Persister(Store store) {
         _store = store;
@@ -63,12 +62,7 @@ public class Persister {
         } catch (InterruptedException e) {
             throw new RuntimeException("Unexpected termination", e);
         }
-//        _additionalIndexer.shutdown();
-//        try {
-//            _additionalIndexer.awaitTermination(3, TimeUnit.MINUTES);
-//        } catch (InterruptedException e) {
-//            throw new RuntimeException("Unexpected termination", e);
-//        }
+
     }
 
     boolean isInWork(WeakHolder holder) {
@@ -128,6 +122,7 @@ public class Persister {
                 if (_reschedule) {
                     _reschedule = false;
                     _mainIndexer.schedule(this, 2, TimeUnit.SECONDS);
+                    //System.out.println("*** rescheduling as added new info ***");
                     return;
                 }
 
