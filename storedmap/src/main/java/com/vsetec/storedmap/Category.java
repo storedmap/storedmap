@@ -16,7 +16,6 @@
 package com.vsetec.storedmap;
 
 import java.lang.ref.WeakReference;
-import java.nio.charset.StandardCharsets;
 import java.text.Collator;
 import java.text.ParseException;
 import java.text.RuleBasedCollator;
@@ -32,9 +31,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.WeakHashMap;
-import org.apache.commons.codec.binary.Base32;
 import org.apache.commons.lang3.SerializationUtils;
 
 /**
@@ -295,6 +292,9 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return iterable of Stored Maps
      */
     public Iterable<StoredMap> maps(String[] anyOfTags) {
+        if (anyOfTags == null || anyOfTags.length == 0) {
+            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
+        }
         return new StoredMaps(this, _driver.get(_indexName, _connection, anyOfTags));
     }
 
@@ -351,6 +351,9 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return iterable of Stored Maps
      */
     public Iterable<StoredMap> maps(Object minSorter, Object maxSorter, String[] anyOfTags, boolean ascending) {
+        if (anyOfTags == null || anyOfTags.length == 0) {
+            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
+        }
         byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return new StoredMaps(this, _driver.get(_indexName, _connection, min, max, anyOfTags, ascending));
@@ -370,6 +373,9 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return iterable of Stored Maps
      */
     public Iterable<StoredMap> maps(String textQuery, String[] anyOfTags) {
+        if (anyOfTags == null || anyOfTags.length == 0) {
+            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
+        }
         return new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, anyOfTags));
     }
 
@@ -392,6 +398,9 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return iterable of Stored Maps
      */
     public Iterable<StoredMap> maps(String textQuery, Object minSorter, Object maxSorter, String[] anyOfTags, boolean ascending) {
+        if (anyOfTags == null || anyOfTags.length == 0) {
+            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
+        }
         byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, min, max, anyOfTags, ascending));
@@ -455,6 +464,9 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return list of Stored Maps
      */
     public List<StoredMap> maps(String[] anyOfTags, int from, int size) {
+        if (anyOfTags == null || anyOfTags.length == 0) {
+            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
+        }
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, anyOfTags, from, size));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
@@ -531,6 +543,9 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return list of Stored Maps
      */
     public List<StoredMap> maps(Object minSorter, Object maxSorter, String[] anyOfTags, boolean ascending, int from, int size) {
+        if (anyOfTags == null || anyOfTags.length == 0) {
+            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
+        }
         byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, min, max, anyOfTags, ascending, from, size));
@@ -558,6 +573,9 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return list of Stored Maps
      */
     public List<StoredMap> maps(String textQuery, String[] anyOfTags, int from, int size) {
+        if (anyOfTags == null || anyOfTags.length == 0) {
+            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
+        }
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, anyOfTags, from, size));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
@@ -583,6 +601,9 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return list of Stored Maps
      */
     public List<StoredMap> maps(String textQuery, Object minSorter, Object maxSorter, String[] anyOfTags, boolean ascending, int from, int size) {
+        if (anyOfTags == null || anyOfTags.length == 0) {
+            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
+        }
         byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, min, max, anyOfTags, ascending, from, size));
@@ -654,6 +675,9 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return number of StoredMaps in the Category
      */
     public long count(String textQuery, Object minSorter, Object maxSorter, String[] anyOfTags) {
+        if (anyOfTags == null || anyOfTags.length == 0) {
+            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
+        }
         byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return _driver.count(_indexName, _connection, textQuery, min, max, anyOfTags);
@@ -674,6 +698,9 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return number of StoredMaps in the Category
      */
     public long count(Object minSorter, Object maxSorter, String[] anyOfTags) {
+        if (anyOfTags == null || anyOfTags.length == 0) {
+            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
+        }
         byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return _driver.count(_indexName, _connection, min, max, anyOfTags);
@@ -692,6 +719,9 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return number of StoredMaps in the Category
      */
     public long count(String textQuery, String[] anyOfTags) {
+        if (anyOfTags == null || anyOfTags.length == 0) {
+            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
+        }
         return _driver.count(_indexName, _connection, textQuery, anyOfTags);
     }
 
@@ -726,6 +756,9 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return number of StoredMaps in the Category
      */
     public long count(String[] anyOfTags) {
+        if (anyOfTags == null || anyOfTags.length == 0) {
+            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
+        }
         return _driver.count(_indexName, _connection, anyOfTags);
     }
 

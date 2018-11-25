@@ -16,18 +16,12 @@
 package com.vsetec.storedmap;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.text.CollationKey;
 import java.text.Collator;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
-import org.apache.commons.lang3.SerializationUtils;
 
 /**
  *
@@ -35,12 +29,15 @@ import org.apache.commons.lang3.SerializationUtils;
  */
 public class MapData implements Serializable {
 
+    static final String[] NOTAGSACTUAL = new String[0];
+    static final String NOTAGSMAGICAL = "***NOTAGS***";
     private final LinkedHashMap<String, Object> _map = new LinkedHashMap<>();
     private final Object[] _sorterObject = new Object[1];
     private final List<String> _tags = new ArrayList<>(4);
     private transient boolean _scheduledForDelete = false;
 
     public MapData() {
+        _tags.add(NOTAGSMAGICAL);
     }
 
     public boolean isScheduledForDelete() {
@@ -57,10 +54,15 @@ public class MapData implements Serializable {
 
     synchronized void putTags(String[] tags) {
         _tags.clear();
-        _tags.addAll(Arrays.asList(tags));
+        if (tags == null || tags.length == 0) {
+            _tags.add(NOTAGSMAGICAL);
+        } else {
+            _tags.addAll(Arrays.asList(tags));
+        }
+
     }
 
-    String[] getTags() {
+    synchronized String[] getTags() {
         return _tags.toArray(new String[_tags.size()]);
     }
 

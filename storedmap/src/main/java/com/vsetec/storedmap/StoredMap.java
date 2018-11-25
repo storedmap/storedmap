@@ -15,6 +15,7 @@
  */
 package com.vsetec.storedmap;
 
+import static com.vsetec.storedmap.MapData.NOTAGSMAGICAL;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -176,7 +177,12 @@ public class StoredMap implements Map<String, Object>, Serializable {
     }
 
     public String[] tags() {
-        return getMapData().getTags();
+        String[] _tags = getMapData().getTags();
+        if (_tags.length == 1 && _tags[0].equals(NOTAGSMAGICAL)) {
+            return MapData.NOTAGSACTUAL;
+        } else {
+            return _tags;
+        }
     }
 
     public void tags(String[] tags) {

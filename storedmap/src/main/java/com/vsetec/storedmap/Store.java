@@ -122,8 +122,11 @@ public class Store implements Closeable {
      */
     @Override
     public void close() {
-        _persister.stop();
-        _driver.closeConnection(_connection);
+        synchronized (STORES) {
+            _persister.stop();
+            _driver.closeConnection(_connection);
+            STORES.remove(_properties);
+        }
     }
 
     Persister getPersister() {
