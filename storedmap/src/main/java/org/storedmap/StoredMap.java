@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.vsetec.storedmap;
+package org.storedmap;
 
-import static com.vsetec.storedmap.MapData.NOTAGSMAGICAL;
+import static org.storedmap.MapData.NOTAGSMAGICAL;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;

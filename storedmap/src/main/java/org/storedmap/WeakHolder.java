@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.vsetec.storedmap;
+package org.storedmap;
 
 import java.lang.ref.WeakReference;
 import java.util.Objects;

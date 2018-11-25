@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.vsetec.storedmap;
+package org.storedmap;
 
 import java.io.Closeable;
 import java.util.HashMap;
@@ -40,7 +40,7 @@ import java.util.Set;
  * The two main properties are:</p>
  *
  * <ul><li><b>storedmap.driver</b>: the name of the class that implements
- * {@link com.vsetec.storedmap.Driver}</li>
+ * {@link org.storedmap.Driver}</li>
  *
  * <li><b>storedmap.applicationCode</b>: the substring that prefixes all
  * underlying data store artifacts (tables, indices etc)</li></ul>
