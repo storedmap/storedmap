@@ -39,16 +39,16 @@ import java.util.Set;
  * <p>
  * The two main properties are:</p>
  *
- * <ul><li><b>storedmap.driver</b>: the name of the class that implements
+ * <ul><li><b>driver</b>: the name of the class that implements
  * {@link org.storedmap.Driver}</li>
  *
- * <li><b>storedmap.applicationCode</b>: the substring that prefixes all
- * underlying data store artifacts (tables, indices etc)</li></ul>
+ * <li><b>applicationCode</b>: the substring that prefixes all underlying data
+ * store artifacts (tables, indices etc)</li></ul>
  *
  * <p>
  * The same properties list may contain the configuration items that the driver
- * will use. It is advised that these additional properties have the
- * {@code storedmap.} prefix</p>
+ * will use. It is advised that these additional properties have some driver
+ * specific prefix</p>
  *
  *
  * @author Fyodor Kravchenko <fedd@vsetec.com>
@@ -93,7 +93,7 @@ public class Store implements Closeable {
 
     private Store(Properties properties) {
         Driver driver;
-        String driverClassname = properties.getProperty("storedmap.driver", "com.vsetec.storedmap.jdbc.GenericJdbcDriver");
+        String driverClassname = properties.getProperty("driver", "com.vsetec.storedmap.jdbc.GenericJdbcDriver");
         try {
 
             Class driverClass = Class.forName(driverClassname);
@@ -102,7 +102,7 @@ public class Store implements Closeable {
             throw new StoredMapException("Couldn't load the driver " + driverClassname, e);
         }
 
-        _appCode = properties.getProperty("storedmap.applicationCode", "storedmap");
+        _appCode = properties.getProperty("applicationCode", "storedmap");
         _driver = driver;
         _properties = properties;
 

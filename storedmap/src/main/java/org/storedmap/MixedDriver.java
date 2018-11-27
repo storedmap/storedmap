@@ -30,7 +30,7 @@ public class MixedDriver implements Driver<MixedDriver.MixedConnection> {
 
     @Override
     public synchronized MixedConnection openConnection(Properties properties) {
-        String driverClassName = properties.getProperty("storedmap.driver.main");
+        String driverClassName = properties.getProperty("driver.main");
         Driver mainDriver = _drivers.get(driverClassName);
         if (mainDriver == null) {
             try {
@@ -42,7 +42,7 @@ public class MixedDriver implements Driver<MixedDriver.MixedConnection> {
             }
         }
 
-        driverClassName = properties.getProperty("storedmap.driver.additional");
+        driverClassName = properties.getProperty("driver.additional");
         Driver ftDriver = _drivers.get(driverClassName);
         if (ftDriver == null) {
             try {
@@ -54,7 +54,7 @@ public class MixedDriver implements Driver<MixedDriver.MixedConnection> {
             }
         }
 
-        boolean lockWithMain = "true".equals(properties.getProperty("storedmap.driver.lock.with.main", "true"));
+        boolean lockWithMain = "true".equals(properties.getProperty("driver.lock.with.main", "true"));
 
         Object mainConnection = mainDriver.openConnection(properties);
         Object addConnection = ftDriver.openConnection(properties);
