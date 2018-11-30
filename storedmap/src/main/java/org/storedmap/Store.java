@@ -93,7 +93,7 @@ public class Store implements Closeable {
 
     private Store(Properties properties) {
         Driver driver;
-        String driverClassname = properties.getProperty("driver", "com.vsetec.storedmap.jdbc.GenericJdbcDriver");
+        String driverClassname = properties.getProperty("driver", "org.storedmap.jdbc.GenericJdbcDriver");
         try {
 
             Class driverClass = Class.forName(driverClassname);
