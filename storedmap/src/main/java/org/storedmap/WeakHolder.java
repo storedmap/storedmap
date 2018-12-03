@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Fyodor Kravchenko <fedd@vsetec.com>.
+ * Copyright 2018 Fyodor Kravchenko {@literal(<fedd@vsetec.com>)}.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import java.util.Objects;
 
 /**
  *
- * @author Fyodor Kravchenko <fedd@vsetec.com>
+ * @author Fyodor Kravchenko {@literal(<fedd@vsetec.com>)}
  */
 public class WeakHolder {
 

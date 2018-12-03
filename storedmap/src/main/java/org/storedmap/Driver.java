@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Fyodor Kravchenko <fedd@vsetec.com>.
+ * Copyright 2018 Fyodor Kravchenko {@literal(<fedd@vsetec.com>)}.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ import java.util.Properties;
  * object of any type that will let the Driver implementation perform the needed
  * command.</p>
  *
- * @author Fyodor Kravchenko <fedd@vsetec.com>
+ * @author Fyodor Kravchenko {@literal(<fedd@vsetec.com>)}
  *
  * @param <T> Type of the connection object
  */
