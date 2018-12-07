@@ -172,7 +172,19 @@ public class StoredMap implements Map<String, Object>, Serializable {
         synchronized (_holder) {
             MapData map = _getOrLoadForPersist();
             //System.out.println("putting sorter: " + sorter.toString() + " for key " + _holder.getKey());
-            map.putSorter(sorter);
+            map.setSorter(sorter);
+        }
+    }
+
+    public String secondaryKey() {
+        return getMapData().getSecondarKey();
+    }
+
+    public void secondaryKey(String secondaryKey) {
+        synchronized (_holder) {
+            MapData map = _getOrLoadForPersist();
+            //System.out.println("putting sorter: " + sorter.toString() + " for key " + _holder.getKey());
+            map.setSecondaryKey(secondaryKey);
         }
     }
 
@@ -188,7 +200,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
     public void tags(String[] tags) {
         synchronized (_holder) {
             MapData map = _getOrLoadForPersist();
-            map.putTags(tags);
+            map.setTags(tags);
         }
     }
 

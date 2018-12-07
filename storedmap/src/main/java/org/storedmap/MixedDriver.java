@@ -105,80 +105,20 @@ public class MixedDriver implements Driver<MixedDriver.MixedConnection> {
     public Iterable<String> get(String indexName, MixedConnection connection) {
         return connection._mainDriver.get(indexName, connection._mainConnection);
     }
-
-    @Override
-    public Iterable<String> get(String indexName, MixedConnection connection, String[] anyOfTags) {
-        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, anyOfTags);
-    }
-
-    @Override
-    public Iterable<String> get(String indexName, MixedConnection connection, byte[] minSorter, byte[] maxSorter, boolean ascending) {
-        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, minSorter, maxSorter, ascending);
-    }
-
-    @Override
-    public Iterable<String> get(String indexName, MixedConnection connection, String textQuery) {
-        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, textQuery);
-    }
-
-    @Override
-    public Iterable<String> get(String indexName, MixedConnection connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending) {
-        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, minSorter, maxSorter, anyOfTags, ascending);
-    }
-
-    @Override
-    public Iterable<String> get(String indexName, MixedConnection connection, String textQuery, String[] anyOfTags) {
-        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, textQuery, anyOfTags);
-    }
-
-    @Override
-    public Iterable<String> get(String indexName, MixedConnection connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending) {
-        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, textQuery, minSorter, maxSorter, anyOfTags, ascending);
-    }
-
-    @Override
-    public Iterable<String> get(String indexName, MixedConnection connection, String textQuery, byte[] minSorter, byte[] maxSorter, boolean ascending) {
-        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, textQuery, minSorter, maxSorter, ascending);
-    }
-
+    
     @Override
     public Iterable<String> get(String indexName, MixedConnection connection, int from, int size) {
         return connection._mainDriver.get(indexName, connection._mainConnection, from, size);
     }
-
+    
     @Override
-    public Iterable<String> get(String indexName, MixedConnection connection, String[] anyOfTags, int from, int size) {
-        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, anyOfTags, from, size);
+    public Iterable<String> get(String indexName, MixedConnection connection, String secondaryKey, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, Boolean ascending, String textQuery) {
+        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, secondaryKey, minSorter, maxSorter, anyOfTags, ascending, textQuery);
     }
 
     @Override
-    public Iterable<String> get(String indexName, MixedConnection connection, byte[] minSorter, byte[] maxSorter, boolean ascending, int from, int size) {
-        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, minSorter, maxSorter, ascending, from, size);
-    }
-
-    @Override
-    public Iterable<String> get(String indexName, MixedConnection connection, String textQuery, int from, int size) {
-        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, textQuery, from, size);
-    }
-
-    @Override
-    public Iterable<String> get(String indexName, MixedConnection connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending, int from, int size) {
-        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, minSorter, maxSorter, anyOfTags, ascending, from, size);
-    }
-
-    @Override
-    public Iterable<String> get(String indexName, MixedConnection connection, String textQuery, String[] anyOfTags, int from, int size) {
-        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, textQuery, anyOfTags, from, size);
-    }
-
-    @Override
-    public Iterable<String> get(String indexName, MixedConnection connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending, int from, int size) {
-        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, textQuery, minSorter, maxSorter, anyOfTags, ascending, from, size);
-    }
-
-    @Override
-    public Iterable<String> get(String indexName, MixedConnection connection, String textQuery, byte[] minSorter, byte[] maxSorter, boolean ascending, int from, int size) {
-        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, textQuery, minSorter, maxSorter, ascending, from, size);
+    public Iterable<String> get(String indexName, MixedConnection connection, String secondaryKey, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, Boolean ascending, String textQuery, int from, int size) {
+        return connection._fulltextDriver.get(indexName, connection._fulltextConnection, secondaryKey, minSorter, maxSorter, anyOfTags, ascending, textQuery, from, size);
     }
 
     @Override
@@ -197,8 +137,8 @@ public class MixedDriver implements Driver<MixedDriver.MixedConnection> {
     }
 
     @Override
-    public void put(String key, String indexName, MixedConnection connection, Map<String, Object> map, Locale[] locales, byte[] sorter, String[] tags, Runnable callbackAfterAdditionalIndex) {
-        connection._fulltextDriver.put(key, indexName, connection._fulltextConnection, map, locales, sorter, tags, callbackAfterAdditionalIndex);
+    public void put(String key, String indexName, MixedConnection connection, Map<String, Object> map, Locale[] locales, String secondaryKey, byte[] sorter, String[] tags, Runnable callbackAfterAdditionalIndex) {
+        connection._fulltextDriver.put(key, indexName, connection._fulltextConnection, map, locales, secondaryKey, sorter, tags, callbackAfterAdditionalIndex);
     }
 
     @Override
@@ -219,41 +159,8 @@ public class MixedDriver implements Driver<MixedDriver.MixedConnection> {
     }
 
     @Override
-    public long count(String indexName, MixedConnection connection, String[] anyOfTags) {
-        return connection._fulltextDriver.count(indexName, connection._mainConnection, anyOfTags);
-    }
-
-    @Override
-    public long count(String indexName, MixedConnection connection, byte[] minSorter, byte[] maxSorter) {
-        return connection._fulltextDriver.count(indexName, connection._mainConnection, minSorter, maxSorter);
-    }
-
-    @Override
-    public long count(String indexName, MixedConnection connection, String textQuery) {
-        return connection._fulltextDriver.count(indexName, connection._mainConnection, textQuery);
-
-    }
-
-    @Override
-    public long count(String indexName, MixedConnection connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags) {
-        return connection._fulltextDriver.count(indexName, connection._mainConnection, minSorter, maxSorter, anyOfTags);
-    }
-
-    @Override
-    public long count(String indexName, MixedConnection connection, String textQuery, String[] anyOfTags) {
-        return connection._fulltextDriver.count(indexName, connection._mainConnection, textQuery, anyOfTags);
-
-    }
-
-    @Override
-    public long count(String indexName, MixedConnection connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags) {
-        return connection._fulltextDriver.count(indexName, connection._mainConnection, textQuery, minSorter, maxSorter, anyOfTags);
-    }
-
-    @Override
-    public long count(String indexName, MixedConnection connection, String textQuery, byte[] minSorter, byte[] maxSorter) {
-        return connection._fulltextDriver.count(indexName, connection._mainConnection, textQuery, minSorter, maxSorter);
-
+    public long count(String indexName, MixedConnection connection, String secondaryKey, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, String textQuery) {
+        return connection._fulltextDriver.count(indexName, connection._mainConnection, secondaryKey, minSorter, maxSorter, anyOfTags, textQuery);
     }
 
     @Override

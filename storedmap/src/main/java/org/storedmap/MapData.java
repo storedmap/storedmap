@@ -34,6 +34,7 @@ public class MapData implements Serializable {
     private final LinkedHashMap<String, Object> _map = new LinkedHashMap<>();
     private final Object[] _sorterObject = new Object[1];
     private final List<String> _tags = new ArrayList<>(4);
+    private final String[]_secondaryKey = new String[1];
     private transient boolean _scheduledForDelete = false;
 
     public MapData() {
@@ -52,7 +53,7 @@ public class MapData implements Serializable {
         return _map;
     }
 
-    synchronized void putTags(String[] tags) {
+    synchronized void setTags(String[] tags) {
         _tags.clear();
         if (tags == null || tags.length == 0) {
             _tags.add(NOTAGSMAGICAL);
@@ -66,12 +67,20 @@ public class MapData implements Serializable {
         return _tags.toArray(new String[_tags.size()]);
     }
 
-    void putSorter(Object sorter) {
+    void setSorter(Object sorter) {
         _sorterObject[0] = sorter;
     }
 
     Object getSorter() {
         return _sorterObject[0];
+    }
+
+    void setSecondaryKey(String secondaryKey) {
+        _secondaryKey[0] = secondaryKey;
+    }
+
+    String getSecondarKey() {
+        return _secondaryKey[0];
     }
 
     byte[] getSorterAsBytes(Collator collator, int maximumSorterLength) {
@@ -83,6 +92,7 @@ public class MapData implements Serializable {
         int hash = 5;
         hash = 19 * hash + Objects.hashCode(this._map);
         hash = 19 * hash + Objects.hashCode(this._sorterObject[0]);
+        hash = 19 * hash + Objects.hashCode(this._secondaryKey[0]);
         hash = 19 * hash + Objects.hashCode(this._tags);
         return hash;
     }
@@ -106,6 +116,9 @@ public class MapData implements Serializable {
 //            return false;
 //        }
         if (!Objects.equals(this._sorterObject[0], other._sorterObject[0])) {
+            return false;
+        }
+        if (!Objects.equals(this._secondaryKey[0], other._secondaryKey[0])) {
             return false;
         }
         return Objects.equals(this._tags, other._tags);

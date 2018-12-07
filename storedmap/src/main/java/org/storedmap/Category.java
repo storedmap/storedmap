@@ -281,105 +281,6 @@ public class Category implements Map<String, Map<String, Object>> {
     }
 
     /**
-     * Gets the persisted Maps that are associated with any of the specified
-     * tags set by {@link StoredMap#tags(java.lang.String[])}.
-     *
-     * <p>
-     * This method may omit the most recently added StoredMaps if they weren't
-     * yet persisted asynchronously</p>
-     *
-     * @param anyOfTags array of tag Strings
-     * @return iterable of Stored Maps
-     */
-    public Iterable<StoredMap> maps(String[] anyOfTags) {
-        if (anyOfTags == null || anyOfTags.length == 0) {
-            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
-        }
-        return new StoredMaps(this, _driver.get(_indexName, _connection, anyOfTags));
-    }
-
-    /**
-     * Gets the StoredMaps of this Category that have a
-     * {@link StoredMap#sorter(java.lang.Object)} set to a value in the
-     * specified range.
-     *
-     * <p>
-     * This method may omit the most recently added StoredMaps if they weren't
-     * yet persisted asynchronously</p>
-     *
-     * @param minSorter minimum value of Sorter
-     * @param maxSorter maximum value of Sorter
-     * @param ascending false if the results should be ordered from maximum to
-     * minimum Sorter value, true otherwise
-     * @return iterable of Stored Maps
-     */
-    public Iterable<StoredMap> maps(Object minSorter, Object maxSorter, boolean ascending) {
-        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        return new StoredMaps(this, _driver.get(_indexName, _connection, min, max, ascending));
-    }
-
-    /**
-     * Gets the StoredMaps of this Category that conform with the
-     * database-specific query.
-     *
-     * <p>
-     * This method may omit the most recently added StoredMaps if they weren't
-     * yet persisted asynchronously</p>
-     *
-     * @param textQuery a database-specific query in textual form
-     * @return iterable of Stored Maps
-     */
-    public Iterable<StoredMap> maps(String textQuery) {
-        return new StoredMaps(this, _driver.get(_indexName, _connection, textQuery));
-    }
-
-    /**
-     * Gets the iterable collection of StoredMaps that have a
-     * {@link StoredMap#sorter(java.lang.Object)} set to a value in the
-     * specified range and that are associated with any of the specified tags
-     * set by {@link StoredMap#tags(java.lang.String[])}.
-     *
-     * <p>
-     * This method may omit the most recently added StoredMaps if they weren't
-     * yet persisted asynchronously</p>
-     *
-     * @param minSorter minimum value of Sorter
-     * @param maxSorter maximum value of Sorter
-     * @param anyOfTags array of tag Strings
-     * @param ascending false if the results should be ordered from maximum to
-     * @return iterable of Stored Maps
-     */
-    public Iterable<StoredMap> maps(Object minSorter, Object maxSorter, String[] anyOfTags, boolean ascending) {
-        if (anyOfTags == null || anyOfTags.length == 0) {
-            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
-        }
-        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        return new StoredMaps(this, _driver.get(_indexName, _connection, min, max, anyOfTags, ascending));
-    }
-
-    /**
-     * Gets the iterable collection of StoredMaps that conform with the
-     * database-specific query and that are associated with any of the specified
-     * tags set by {@link StoredMap#tags(java.lang.String[])}.
-     * <p>
-     * This method may omit the most recently added StoredMaps if they weren't
-     * yet persisted asynchronously</p>
-     *
-     *
-     * @param textQuery a database-specific query in textual form
-     * @param anyOfTags array of tag Strings
-     * @return iterable of Stored Maps
-     */
-    public Iterable<StoredMap> maps(String textQuery, String[] anyOfTags) {
-        if (anyOfTags == null || anyOfTags.length == 0) {
-            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
-        }
-        return new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, anyOfTags));
-    }
-
-    /**
      * Gets the iterable collection of StoredMaps that conform with the
      * database-specific query, have a
      * {@link StoredMap#sorter(java.lang.Object)} set to a value in the
@@ -390,198 +291,21 @@ public class Category implements Map<String, Map<String, Object>> {
      * This method may omit the most recently added StoredMaps if they weren't
      * yet persisted asynchronously</p>
      *
-     * @param textQuery a database-specific query in textual form
+     * @param secondaryKey
      * @param minSorter minimum value of Sorter
      * @param maxSorter maximum value of Sorter
      * @param anyOfTags array of tag Strings
      * @param ascending false if the results should be ordered from maximum to
+     * @param textQuery a database-specific query in textual form
      * @return iterable of Stored Maps
      */
-    public Iterable<StoredMap> maps(String textQuery, Object minSorter, Object maxSorter, String[] anyOfTags, boolean ascending) {
+    public Iterable<StoredMap> maps(String secondaryKey, Object minSorter, Object maxSorter, String[] anyOfTags, Boolean ascending, String textQuery) {
         if (anyOfTags == null || anyOfTags.length == 0) {
             anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
         }
         byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        return new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, min, max, anyOfTags, ascending));
-    }
-
-    /**
-     * Gets the iterable collection of StoredMaps that conform with the
-     * database-specific query and have a
-     * {@link StoredMap#sorter(java.lang.Object)} set to a value in the
-     * specified range.
-     * <p>
-     * This method may omit the most recently added StoredMaps if they weren't
-     * yet persisted asynchronously</p>
-     *
-     *
-     * @param textQuery a database-specific query in textual form
-     * @param minSorter minimum value of Sorter
-     * @param maxSorter maximum value of Sorter
-     * @param ascending false if the results should be ordered from maximum to
-     * @return iterable of Stored Maps
-     */
-    public Iterable<StoredMap> maps(String textQuery, Object minSorter, Object maxSorter, boolean ascending) {
-        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        return new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, min, max, ascending));
-    }
-
-    /**
-     * Gets the {@link List} of StoredMaps of the specified size, starting from
-     * a specified item.
-     *
-     * <p>
-     * This method may omit the most recently added StoredMaps if they weren't
-     * yet persisted asynchronously</p>
-     *
-     * @param from the starting item
-     * @param size the maximum size of the returned list
-     * @return list of Stored Maps
-     */
-    public List<StoredMap> maps(int from, int size) {
-        StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, from, size));
-        ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
-        for (StoredMap map : maps) {
-            ret.add(map);
-        }
-        return Collections.unmodifiableList(ret);
-    }
-
-    /**
-     * Gets the {@link List} of StoredMaps of the specified size, starting from
-     * a specified item, that are associated with any of the specified tags set
-     * by {@link StoredMap#tags(java.lang.String[])}.
-     *
-     * <p>
-     * This method may omit the most recently added StoredMaps if they weren't
-     * yet persisted asynchronously</p>
-     *
-     * @param anyOfTags array of tag Strings
-     * @param from the starting item
-     * @param size the maximum size of the returned list
-     * @return list of Stored Maps
-     */
-    public List<StoredMap> maps(String[] anyOfTags, int from, int size) {
-        if (anyOfTags == null || anyOfTags.length == 0) {
-            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
-        }
-        StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, anyOfTags, from, size));
-        ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
-        for (StoredMap map : maps) {
-            ret.add(map);
-        }
-        return Collections.unmodifiableList(ret);
-    }
-
-    /**
-     * Gets the {@link List} of StoredMaps of the specified size, starting from
-     * a specified item, that have a {@link StoredMap#sorter(java.lang.Object)}
-     * set to a value in the specified range.
-     *
-     * <p>
-     * This method may omit the most recently added StoredMaps if they weren't
-     * yet persisted asynchronously</p>
-     *
-     * @param minSorter minimum value of Sorter
-     * @param maxSorter maximum value of Sorter
-     * @param ascending false if the results should be ordered from maximum to
-     * @param from the starting item
-     * @param size the maximum size of the returned list
-     * @return list of Stored Maps
-     */
-    public List<StoredMap> maps(Object minSorter, Object maxSorter, boolean ascending, int from, int size) {
-        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, min, max, ascending, from, size));
-        ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
-        for (StoredMap map : maps) {
-            ret.add(map);
-        }
-        return Collections.unmodifiableList(ret);
-    }
-
-    /**
-     * Gets the {@link List} of StoredMaps of the specified size, starting from
-     * a specified item, that conform to the database-specific query.
-     *
-     * <p>
-     * This method may omit the most recently added StoredMaps if they weren't
-     * yet persisted asynchronously</p>
-     *
-     * @param textQuery a database-specific query in textual form
-     * @param from the starting item
-     * @param size the maximum size of the returned list
-     * @return list of Stored Maps
-     */
-    public List<StoredMap> maps(String textQuery, int from, int size) {
-        StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, from, size));
-        ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
-        for (StoredMap map : maps) {
-            ret.add(map);
-        }
-        return Collections.unmodifiableList(ret);
-    }
-
-    /**
-     * Gets the {@link List} of StoredMaps of the specified size, starting from
-     * a specified item, that have a {@link StoredMap#sorter(java.lang.Object)}
-     * set to a value in the specified range and that are associated with any of
-     * the specified tags set by {@link StoredMap#tags(java.lang.String[])}.
-     *
-     * <p>
-     * This method may omit the most recently added StoredMaps if they weren't
-     * yet persisted asynchronously</p>
-     *
-     * @param minSorter minimum value of Sorter
-     * @param maxSorter maximum value of Sorter
-     * @param anyOfTags array of tag Strings
-     * @param ascending false if the results should be ordered from maximum to
-     * @param from the starting item
-     * @param size the maximum size of the returned list
-     * @return list of Stored Maps
-     */
-    public List<StoredMap> maps(Object minSorter, Object maxSorter, String[] anyOfTags, boolean ascending, int from, int size) {
-        if (anyOfTags == null || anyOfTags.length == 0) {
-            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
-        }
-        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, min, max, anyOfTags, ascending, from, size));
-        ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
-        for (StoredMap map : maps) {
-            ret.add(map);
-        }
-        return Collections.unmodifiableList(ret);
-    }
-
-    /**
-     * Gets the {@link List} of StoredMaps of the specified size, starting from
-     * a specified item, that conform to the database-specific query and are
-     * associated with any of the specified tags set by
-     * {@link StoredMap#tags(java.lang.String[])}.
-     *
-     * <p>
-     * This method may omit the most recently added StoredMaps if they weren't
-     * yet persisted asynchronously</p>
-     *
-     * @param textQuery a database-specific query in textual form
-     * @param anyOfTags array of tag Strings
-     * @param from the starting item
-     * @param size the maximum size of the returned list
-     * @return list of Stored Maps
-     */
-    public List<StoredMap> maps(String textQuery, String[] anyOfTags, int from, int size) {
-        if (anyOfTags == null || anyOfTags.length == 0) {
-            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
-        }
-        StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, anyOfTags, from, size));
-        ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
-        for (StoredMap map : maps) {
-            ret.add(map);
-        }
-        return Collections.unmodifiableList(ret);
+        return new StoredMaps(this, _driver.get(_indexName, _connection, secondaryKey, min, max, anyOfTags, ascending, textQuery));
     }
 
     /**
@@ -591,51 +315,23 @@ public class Category implements Map<String, Map<String, Object>> {
      * specified range and that are associated with any of the specified tags
      * set by {@link StoredMap#tags(java.lang.String[])}.
      *
-     * @param textQuery a database-specific query in textual form
+     * @param secondaryKey
      * @param minSorter minimum value of Sorter
      * @param maxSorter maximum value of Sorter
      * @param anyOfTags array of tag Strings
      * @param ascending false if the results should be ordered from maximum to
+     * @param textQuery a database-specific query in textual form
      * @param from the starting item
      * @param size the maximum size of the returned list
      * @return list of Stored Maps
      */
-    public List<StoredMap> maps(String textQuery, Object minSorter, Object maxSorter, String[] anyOfTags, boolean ascending, int from, int size) {
+    public List<StoredMap> maps(String secondaryKey, Object minSorter, Object maxSorter, String[] anyOfTags, Boolean ascending, String textQuery, int from, int size) {
         if (anyOfTags == null || anyOfTags.length == 0) {
             anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
         }
         byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, min, max, anyOfTags, ascending, from, size));
-        ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
-        for (StoredMap map : maps) {
-            ret.add(map);
-        }
-        return Collections.unmodifiableList(ret);
-    }
-
-    /**
-     * Gets the {@link List} of StoredMaps of the specified size, starting from
-     * a specified item, that conform to the database-specific query and have a
-     * {@link StoredMap#sorter(java.lang.Object)} set to a value in the
-     * specified range.
-     *
-     * <p>
-     * This method may omit the most recently added StoredMaps if they weren't
-     * yet persisted asynchronously</p>
-     *
-     * @param textQuery a database-specific query in textual form
-     * @param minSorter minimum value of Sorter
-     * @param maxSorter maximum value of Sorter
-     * @param ascending false if the results should be ordered from maximum to
-     * @param from the starting item
-     * @param size the maximum size of the returned list
-     * @return list of Stored Maps
-     */
-    public List<StoredMap> maps(String textQuery, Object minSorter, Object maxSorter, boolean ascending, int from, int size) {
-        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, textQuery, min, max, ascending, from, size));
+        StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, secondaryKey, min, max, anyOfTags, ascending, textQuery, from, size));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
             ret.add(map);
@@ -668,130 +364,20 @@ public class Category implements Map<String, Map<String, Object>> {
      * <p>
      * The number may miss the StoredMaps added most recently</p>
      *
-     * @param textQuery a database-specific query in textual form
+     * @param secondaryKey
      * @param minSorter minimum value of Sorter
      * @param maxSorter maximum value of Sorter
      * @param anyOfTags array of tag Strings
+     * @param textQuery a database-specific query in textual form
      * @return number of StoredMaps in the Category
      */
-    public long count(String textQuery, Object minSorter, Object maxSorter, String[] anyOfTags) {
+    public long count(String secondaryKey, Object minSorter, Object maxSorter, String[] anyOfTags, String textQuery) {
         if (anyOfTags == null || anyOfTags.length == 0) {
             anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
         }
         byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        return _driver.count(_indexName, _connection, textQuery, min, max, anyOfTags);
-    }
-
-    /**
-     * Counts all StoredMaps in this Category that have a
-     * {@link StoredMap#sorter(java.lang.Object)} set to a value in the
-     * specified range and are associated with any of the specified tags set by
-     * {@link StoredMap#tags(java.lang.String[])}.
-     *
-     * <p>
-     * The number may miss the StoredMaps added most recently</p>
-     *
-     * @param minSorter minimum value of Sorter
-     * @param maxSorter maximum value of Sorter
-     * @param anyOfTags array of tag Strings
-     * @return number of StoredMaps in the Category
-     */
-    public long count(Object minSorter, Object maxSorter, String[] anyOfTags) {
-        if (anyOfTags == null || anyOfTags.length == 0) {
-            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
-        }
-        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        return _driver.count(_indexName, _connection, min, max, anyOfTags);
-    }
-
-    /**
-     * Counts all StoredMaps in this Category that conform with the
-     * database-specific query and are associated with any of the specified tags
-     * set by {@link StoredMap#tags(java.lang.String[])}.
-     *
-     * <p>
-     * The number may miss the StoredMaps added most recently</p>
-     *
-     * @param textQuery a database-specific query in textual form
-     * @param anyOfTags array of tag Strings
-     * @return number of StoredMaps in the Category
-     */
-    public long count(String textQuery, String[] anyOfTags) {
-        if (anyOfTags == null || anyOfTags.length == 0) {
-            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
-        }
-        return _driver.count(_indexName, _connection, textQuery, anyOfTags);
-    }
-
-    /**
-     * Counts all StoredMaps in this Category that conform with the
-     * database-specific query and have a
-     * {@link StoredMap#sorter(java.lang.Object)} set to a value in the
-     * specified range.
-     *
-     * <p>
-     * The number may miss the StoredMaps added most recently</p>
-     *
-     * @param textQuery a database-specific query in textual form
-     * @param minSorter minimum value of Sorter
-     * @param maxSorter maximum value of Sorter
-     * @return number of StoredMaps in the Category
-     */
-    public long count(String textQuery, Object minSorter, Object maxSorter) {
-        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        return _driver.count(_indexName, _connection, textQuery, min, max);
-    }
-
-    /**
-     * Counts all StoredMaps in this Category that are associated with any of
-     * the specified tags set by {@link StoredMap#tags(java.lang.String[])}.
-     *
-     * <p>
-     * The number may miss the StoredMaps added most recently</p>
-     *
-     * @param anyOfTags array of tag Strings
-     * @return number of StoredMaps in the Category
-     */
-    public long count(String[] anyOfTags) {
-        if (anyOfTags == null || anyOfTags.length == 0) {
-            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
-        }
-        return _driver.count(_indexName, _connection, anyOfTags);
-    }
-
-    /**
-     * Counts all StoredMaps in this Category that conform with the
-     * database-specific query.
-     *
-     * <p>
-     * The number may miss the StoredMaps added most recently</p>
-     *
-     * @param textQuery a database-specific query in textual form
-     * @return number of StoredMaps in the Category
-     */
-    public long count(String textQuery) {
-        return _driver.count(_indexName, _connection, textQuery);
-    }
-
-    /**
-     * Counts all StoredMaps in this Category that have a
-     * {@link StoredMap#sorter(java.lang.Object)} set to a value in the
-     * specified range.
-     *
-     * <p>
-     * The number may miss the StoredMaps added most recently</p>
-     *
-     * @param minSorter minimum value of Sorter
-     * @param maxSorter maximum value of Sorter
-     * @return number of StoredMaps in the Category
-     */
-    public long count(Object minSorter, Object maxSorter) {
-        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        return _driver.count(_indexName, _connection, min, max);
+        return _driver.count(_indexName, _connection, secondaryKey, min, max, anyOfTags, textQuery);
     }
 
     // **********************************

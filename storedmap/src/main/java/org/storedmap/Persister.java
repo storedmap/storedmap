@@ -137,6 +137,7 @@ public class Persister {
                 Map<String, Object> mapDataMap = _mapData.getMap();
                 byte[] sorter = _mapData.getSorterAsBytes(category.collator(), driver.getMaximumSorterLength(connection));
                 String[] tags = _mapData.getTags();
+                String secondaryKey = _mapData.getSecondarKey();
 
                 driver.put(_holder.getKey(), indexName, connection, mapB, () -> {
                     _inWork.remove(_holder);
@@ -147,6 +148,7 @@ public class Persister {
                             connection,
                             mapDataMap,
                             category.locales(),
+                            secondaryKey,
                             sorter,
                             tags, () -> {
                                 synchronized (_holder) {

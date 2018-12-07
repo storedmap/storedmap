@@ -144,19 +144,7 @@ public interface Driver<T> {
 
     long count(String indexName, T connection);
 
-    long count(String indexName, T connection, String[] anyOfTags);
-
-    long count(String indexName, T connection, byte[] minSorter, byte[] maxSorter);
-
-    long count(String indexName, T connection, String textQuery);
-
-    long count(String indexName, T connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags);
-
-    long count(String indexName, T connection, String textQuery, String[] anyOfTags);
-
-    long count(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags);
-
-    long count(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter);
+    long count(String indexName, T connection, String secondaryKey, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, String textQuery);
 
     /**
      * Gets keys of all {@link StoredMap}s in the index.
@@ -170,6 +158,8 @@ public interface Driver<T> {
      */
     Iterable<String> get(String indexName, T connection);
 
+    Iterable<String> get(String indexName, T connection, int from, int size);    
+    
     /**
      * Gets keys of all {@link StoredMap}s that are associated with any or all
      * of the specified tags.
@@ -179,38 +169,17 @@ public interface Driver<T> {
      *
      * @param indexName index name, shortened if needed
      * @param connection connection object
+     * @param secondaryKey
+     * @param textQuery
+     * @param minSorter
+     * @param maxSorter
      * @param anyOfTags an array of the tag Strings
+     * @param ascending
      * @return an object that can be iterated to get all relevant keys
      */
-    Iterable<String> get(String indexName, T connection, String[] anyOfTags);
+    Iterable<String> get(String indexName, T connection, String secondaryKey, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, Boolean ascending, String textQuery);
 
-    Iterable<String> get(String indexName, T connection, byte[] minSorter, byte[] maxSorter, boolean ascending);
-
-    Iterable<String> get(String indexName, T connection, String textQuery);
-
-    Iterable<String> get(String indexName, T connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending);
-
-    Iterable<String> get(String indexName, T connection, String textQuery, String[] anyOfTags);
-
-    Iterable<String> get(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending);
-
-    Iterable<String> get(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter, boolean ascending);
-
-    Iterable<String> get(String indexName, T connection, int from, int size);
-
-    Iterable<String> get(String indexName, T connection, String[] anyOfTags, int from, int size);
-
-    Iterable<String> get(String indexName, T connection, byte[] minSorter, byte[] maxSorter, boolean ascending, int from, int size);
-
-    Iterable<String> get(String indexName, T connection, String textQuery, int from, int size);
-
-    Iterable<String> get(String indexName, T connection, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending, int from, int size);
-
-    Iterable<String> get(String indexName, T connection, String textQuery, String[] anyOfTags, int from, int size);
-
-    Iterable<String> get(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, boolean ascending, int from, int size);
-
-    Iterable<String> get(String indexName, T connection, String textQuery, byte[] minSorter, byte[] maxSorter, boolean ascending, int from, int size);
+    Iterable<String> get(String indexName, T connection, String secondaryKey, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, Boolean ascending, String textQuery, int from, int size);
 
     /**
      * Tries to lock the key in a specified index or returns the value
@@ -270,6 +239,7 @@ public interface Driver<T> {
             T connection,
             Map<String, Object> map,
             Locale[] locales,
+            String secondaryKey,
             byte[] sorter,
             String[] tags,
             Runnable callbackAfterAdditionalIndex);
