@@ -158,8 +158,8 @@ public interface Driver<T> {
      */
     Iterable<String> get(String indexName, T connection);
 
-    Iterable<String> get(String indexName, T connection, int from, int size);    
-    
+    Iterable<String> get(String indexName, T connection, int from, int size);
+
     /**
      * Gets keys of all {@link StoredMap}s that are associated with any or all
      * of the specified tags.

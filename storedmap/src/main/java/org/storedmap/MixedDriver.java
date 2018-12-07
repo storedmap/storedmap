@@ -105,12 +105,12 @@ public class MixedDriver implements Driver<MixedDriver.MixedConnection> {
     public Iterable<String> get(String indexName, MixedConnection connection) {
         return connection._mainDriver.get(indexName, connection._mainConnection);
     }
-    
+
     @Override
     public Iterable<String> get(String indexName, MixedConnection connection, int from, int size) {
         return connection._mainDriver.get(indexName, connection._mainConnection, from, size);
     }
-    
+
     @Override
     public Iterable<String> get(String indexName, MixedConnection connection, String secondaryKey, byte[] minSorter, byte[] maxSorter, String[] anyOfTags, Boolean ascending, String textQuery) {
         return connection._fulltextDriver.get(indexName, connection._fulltextConnection, secondaryKey, minSorter, maxSorter, anyOfTags, ascending, textQuery);
