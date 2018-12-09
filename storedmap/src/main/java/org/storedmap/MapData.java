@@ -35,25 +35,16 @@ public class MapData implements Serializable {
     private final Object[] _sorterObject = new Object[1];
     private final List<String> _tags = new ArrayList<>(4);
     private final String[] _secondaryKey = new String[1];
-    private transient boolean _scheduledForDelete = false;
 
     public MapData() {
         _tags.add(NOTAGSMAGICAL);
     }
 
-    public boolean isScheduledForDelete() {
-        return _scheduledForDelete;
-    }
-
-    public void setScheduledForDelete(boolean scheduledForDelete) {
-        _scheduledForDelete = scheduledForDelete;
-    }
-
-    LinkedHashMap<String, Object> getMap() {
+    public LinkedHashMap<String, Object> getMap() {
         return _map;
     }
 
-    synchronized void setTags(String[] tags) {
+    public synchronized void setTags(String[] tags) {
         _tags.clear();
         if (tags == null || tags.length == 0) {
             _tags.add(NOTAGSMAGICAL);
@@ -63,23 +54,23 @@ public class MapData implements Serializable {
 
     }
 
-    synchronized String[] getTags() {
+    public synchronized String[] getTags() {
         return _tags.toArray(new String[_tags.size()]);
     }
 
-    void setSorter(Object sorter) {
+    public void setSorter(Object sorter) {
         _sorterObject[0] = sorter;
     }
 
-    Object getSorter() {
+    public Object getSorter() {
         return _sorterObject[0];
     }
 
-    void setSecondaryKey(String secondaryKey) {
+    public void setSecondaryKey(String secondaryKey) {
         _secondaryKey[0] = secondaryKey;
     }
 
-    String getSecondarKey() {
+    public String getSecondarKey() {
         return _secondaryKey[0];
     }
 
