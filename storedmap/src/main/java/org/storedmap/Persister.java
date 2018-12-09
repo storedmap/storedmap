@@ -65,8 +65,13 @@ public class Persister {
 
     }
 
-    boolean isInWork(WeakHolder holder) {
-        return _inWork.contains(holder);
+    void cancelSave(WeakHolder holder) {
+        synchronized (holder) {
+            SaveOrReschedule sor = _inLongWork.get(holder);
+            if (sor != null) {
+                sor._cancelSave = true;
+            }
+        }
     }
 
     MapData scheduleForPersist(StoredMap storedMap) {
@@ -107,6 +112,7 @@ public class Persister {
         private final StoredMap _sm;
         private final WeakHolder _holder;
         private final MapData _mapData;
+        private boolean _cancelSave = false;
 
         public SaveOrReschedule(StoredMap sm, MapData md) {
             _sm = sm;
@@ -139,26 +145,38 @@ public class Persister {
                 String[] tags = _mapData.getTags();
                 String secondaryKey = _mapData.getSecondarKey();
 
-                driver.put(_holder.getKey(), indexName, connection, mapB, () -> {
+                if (!_cancelSave) {
+                    driver.put(_holder.getKey(), indexName, connection, mapB, () -> {
+                        _inWork.remove(_holder);
+                    }, () -> {
+                        if (!_cancelSave) {
+                            driver.put(
+                                    _holder.getKey(),
+                                    indexName,
+                                    connection,
+                                    mapDataMap,
+                                    category.locales(),
+                                    secondaryKey,
+                                    sorter,
+                                    tags, () -> {
+                                        synchronized (_holder) {
+                                            driver.unlock(_holder.getKey(), indexName, connection);
+                                            _inLongWork.remove(_holder);
+                                            _holder.notify();
+                                        }
+                                    });
+                        } else {
+                            driver.unlock(_holder.getKey(), indexName, connection);
+                            _inLongWork.remove(_holder);
+                            _holder.notify();
+                        }
+                    });
+                } else {
                     _inWork.remove(_holder);
-                }, () -> {
-                    driver.put(
-                            _holder.getKey(),
-                            indexName,
-                            connection,
-                            mapDataMap,
-                            category.locales(),
-                            secondaryKey,
-                            sorter,
-                            tags, () -> {
-                                synchronized (_holder) {
-                                    driver.unlock(_holder.getKey(), indexName, connection);
-                                    _inLongWork.remove(_holder);
-                                    _holder.notify();
-                                }
-                            });
-
-                });
+                    driver.unlock(_holder.getKey(), indexName, connection);
+                    _inLongWork.remove(_holder);
+                    _holder.notify();
+                }
 
             }
 

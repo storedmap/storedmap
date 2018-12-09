@@ -117,7 +117,10 @@ public class StoredMap implements Map<String, Object>, Serializable {
             Store store = _category.store();
             Driver driver = store.getDriver();
 
-            if (!_category.store().getPersister().isInWork(_holder)) {
+            //if (!_category.store().getPersister().isInWork(_holder)) 
+            category().store().getPersister().cancelSave(_holder);
+
+            {
                 long waitForLock;
                 // wait for releasing on other machines then lock for ourselves
                 while ((waitForLock = driver.tryLock(_holder.getKey(), _category.internalIndexName(), store.getConnection(), 100000)) > 0) {
