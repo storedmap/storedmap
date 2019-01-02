@@ -115,11 +115,12 @@ public class StoredMap implements Map<String, Object>, Serializable {
         // immediate remove
         synchronized (_holder) {
             Store store = _category.store();
+
+            store.getPersister().cancelSave(_holder);
+
             Driver driver = store.getDriver();
 
             //if (!_category.store().getPersister().isInWork(_holder)) 
-            category().store().getPersister().cancelSave(_holder);
-
             {
                 long waitForLock;
                 // wait for releasing on other machines then lock for ourselves
