@@ -22,12 +22,16 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.SerializationUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author Fyodor Kravchenko {@literal(<fedd@vsetec.com>)}
  */
 public class Persister {
+
+    private static final Logger LOG = LoggerFactory.getLogger(StoredMap.class);
 
     private final Store _store;
     private final ConcurrentHashMap<WeakHolder, SaveOrReschedule> _inWork = new ConcurrentHashMap<>();
@@ -70,6 +74,7 @@ public class Persister {
             SaveOrReschedule sor = _inLongWork.get(holder);
             if (sor != null) {
                 sor._cancelSave = true;
+                LOG.debug("Cancelling save of {}-{}", holder.getCategory(), holder.getKey());
             }
         }
     }
@@ -77,6 +82,7 @@ public class Persister {
     MapData scheduleForPersist(StoredMap storedMap) {
         WeakHolder holder = storedMap.holder();
         synchronized (holder) {
+            LOG.debug("Planning to save {}-{}", holder.getCategory(), holder.getKey());
             SaveOrReschedule command = _inWork.get(holder);
             if (command != null) {
                 command._reschedule = true;
@@ -86,7 +92,7 @@ public class Persister {
                 // wait for releasing on other machines then lock for ourselves
                 while ((waitForLock = _store.getDriver().tryLock(holder.getKey(), storedMap.category().internalIndexName(), _store.getConnection(), 100000)) > 0) {
                     try {
-                        System.out.println("Waiting " + storedMap.category().internalIndexName() + " for " + waitForLock);
+                        LOG.warn("Waiting " + storedMap.category().internalIndexName() + " for " + waitForLock);
                         holder.wait(waitForLock > 5000 ? 2000 : waitForLock); // check every 2 seconds
                     } catch (InterruptedException ex) {
                         throw new RuntimeException("Unexpected interruption", ex);
@@ -163,6 +169,7 @@ public class Persister {
                                             driver.unlock(_holder.getKey(), indexName, connection);
                                             _inLongWork.remove(_holder);
                                             _holder.notify();
+                                            LOG.debug("Saved {}-{}", _holder.getCategory(), _holder.getKey());
                                         }
                                     });
                         } else {

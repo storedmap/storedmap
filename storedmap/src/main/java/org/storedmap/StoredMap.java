@@ -33,6 +33,8 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import org.apache.commons.lang3.SerializationUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -41,6 +43,8 @@ import org.apache.commons.lang3.SerializationUtils;
  * @author Fyodor Kravchenko {@literal(<fedd@vsetec.com>)}
  */
 public class StoredMap implements Map<String, Object>, Serializable {
+
+    private static final Logger LOG = LoggerFactory.getLogger(StoredMap.class);
 
     private final Category _category;
     private final WeakHolder _holder;
@@ -114,6 +118,9 @@ public class StoredMap implements Map<String, Object>, Serializable {
     public void remove() {
         // immediate remove
         synchronized (_holder) {
+
+            LOG.debug("Planning to remove {}-{}", _holder.getCategory(), _holder.getKey());
+
             Store store = _category.store();
 
             store.getPersister().cancelSave(_holder);
@@ -142,6 +149,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
                     synchronized (_holder) {
                         driver.unlock(_holder.getKey(), _category.internalIndexName(), store.getConnection());
                         _holder.notify();
+                        LOG.debug("Removed {}-{}", _holder.getCategory(), _holder.getKey());
                     }
                 }
             });
