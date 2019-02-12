@@ -74,7 +74,14 @@ public class Persister {
             SaveOrReschedule sor = _inLongWork.get(holder);
             if (sor != null) {
                 sor._cancelSave = true;
-                LOG.debug("Cancelling save of {}-{}", holder.getCategory(), holder.getKey());
+                Driver driver = _store.getDriver();
+                Object connection = _store.getConnection();
+                String indexName = sor._sm.category().internalIndexName();
+                _inWork.remove(holder);
+                driver.unlock(holder.getKey(), indexName, connection);
+                _inLongWork.remove(holder);
+                holder.notify();
+                LOG.debug("Cancelling save of {}-{}", holder.getCategory().name(), holder.getKey());
             }
         }
     }
@@ -82,7 +89,7 @@ public class Persister {
     MapData scheduleForPersist(StoredMap storedMap) {
         WeakHolder holder = storedMap.holder();
         synchronized (holder) {
-            LOG.debug("Planning to save {}-{}", holder.getCategory(), holder.getKey());
+            LOG.debug("Planning to save {}-{}", holder.getCategory().name(), holder.getKey());
             SaveOrReschedule command = _inWork.get(holder);
             if (command != null) {
                 command._reschedule = true;
@@ -169,20 +176,20 @@ public class Persister {
                                             driver.unlock(_holder.getKey(), indexName, connection);
                                             _inLongWork.remove(_holder);
                                             _holder.notify();
-                                            LOG.debug("Saved {}-{}", _holder.getCategory(), _holder.getKey());
+                                            LOG.debug("Saved {}-{}", _holder.getCategory().name(), _holder.getKey());
                                         }
                                     });
                         } else {
-                            driver.unlock(_holder.getKey(), indexName, connection);
-                            _inLongWork.remove(_holder);
-                            _holder.notify();
+//                            driver.unlock(_holder.getKey(), indexName, connection);
+//                            _inLongWork.remove(_holder);
+//                            _holder.notify();
                         }
                     });
                 } else {
-                    _inWork.remove(_holder);
-                    driver.unlock(_holder.getKey(), indexName, connection);
-                    _inLongWork.remove(_holder);
-                    _holder.notify();
+//                    _inWork.remove(_holder);
+//                    driver.unlock(_holder.getKey(), indexName, connection);
+//                    _inLongWork.remove(_holder);
+//                    _holder.notify();
                 }
 
             }

@@ -119,7 +119,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
         // immediate remove
         synchronized (_holder) {
 
-            LOG.debug("Planning to remove {}-{}", _holder.getCategory(), _holder.getKey());
+            LOG.debug("Planning to remove {}-{}", _holder.getCategory().name(), _holder.getKey());
 
             Store store = _category.store();
 
@@ -149,7 +149,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
                     synchronized (_holder) {
                         driver.unlock(_holder.getKey(), _category.internalIndexName(), store.getConnection());
                         _holder.notify();
-                        LOG.debug("Removed {}-{}", _holder.getCategory(), _holder.getKey());
+                        LOG.debug("Removed {}-{}", _holder.getCategory().name(), _holder.getKey());
                     }
                 }
             });
