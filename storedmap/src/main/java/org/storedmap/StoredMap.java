@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -249,7 +250,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
         synchronized (_holder) {
             MapData md = _getOrLoadForPersist();
             Map<String, Object> map = md.getMap();
-            Object ret = map.put(key, value);
+            Object ret = map.put(key, _ensureSimpleCollections(value));
             return ret;
         }
     }
@@ -257,6 +258,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
     public Object putAndReturnBacked(String key, Object value) {
         synchronized (_holder) {
             MapData map = _getOrLoadForPersist();
+            value = _ensureSimpleCollections(value);
             map.getMap().put(key, value);
             //_persist(map);
             return _backupWithMe(value, key);
@@ -277,6 +279,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
     public void putAll(Map<? extends String, ? extends Object> m) {
         synchronized (_holder) {
             MapData map = _getOrLoadForPersist();
+            m = (Map<? extends String, ? extends Object>) _ensureSimpleCollections(m);
             map.getMap().putAll(m);
             //_persist(map);
         }
@@ -433,6 +436,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
             synchronized (StoredMap.this._holder) {
                 boolean ret;
                 MapData m = _getOrLoadForPersist();
+                c = (Collection<? extends Entry<String, Object>>) _ensureSimpleCollections(c);
                 ret = m.getMap().entrySet().addAll(c);
                 if (ret) {
                     //_persist(m);
@@ -463,6 +467,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
             synchronized (StoredMap.this._holder) {
                 boolean ret;
                 Map m = _getOrLoadForPersist().getMap();
+                c = (Collection<?>) _ensureSimpleCollections(c);
                 ret = m.entrySet().retainAll(c);
                 if (ret) {
                     //_persist();
@@ -530,6 +535,31 @@ public class StoredMap implements Map<String, Object>, Serializable {
         return (T) ret;
     }
 
+    private Object _ensureSimpleCollections(Object obj) {
+        if (obj instanceof Collection) {
+            Collection c = (Collection) obj;
+            Object[] objects = new Object[c.size()];
+            objects = c.toArray(objects);
+            for (int i = 0; i < objects.length; i++) {
+                objects[i] = _ensureSimpleCollections(objects[i]);
+            }
+            obj = new ArrayList(Arrays.asList(objects));
+        } else if (obj instanceof Map) {
+            Map<? extends Object, ? extends Object> m1 = (Map) obj;
+            Map<? extends Object, ? extends Object> m2 = new LinkedHashMap<>(m1);
+
+            for (Map.Entry entry : m2.entrySet()) {
+                entry.setValue(_ensureSimpleCollections(entry.getValue()));
+            }
+
+            obj = m2;
+        } else if (obj instanceof Entry) {
+            ((Entry) obj).setValue(_ensureSimpleCollections(((Entry) obj).getValue()));
+        }
+
+        return obj;
+    }
+
     private Object _ensureUnbacked(Object obj) {
         if (obj instanceof Backed) {
             obj = ((Backed) obj).unbacked();
@@ -543,7 +573,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
             obj = new ArrayList(Arrays.asList(objects));
         } else if (obj instanceof Map) {
             Map<? extends Object, ? extends Object> m1 = (Map) obj;
-            Map<? extends Object, ? extends Object> m2 = new HashMap(m1);
+            Map<? extends Object, ? extends Object> m2 = new LinkedHashMap<>(m1);
 
             for (Map.Entry entry : m2.entrySet()) {
                 entry.setValue(_ensureUnbacked(entry.getValue()));
