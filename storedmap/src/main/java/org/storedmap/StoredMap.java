@@ -74,6 +74,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
 
+        LOG.debug("Starting deserializing some StoredMap");
         Properties properties = (Properties) in.readObject();
         Store store = Store.getStore(properties);
 
