@@ -244,6 +244,52 @@ public class StoredMap implements Map<String, Object>, Serializable {
         return getMapData().getMap().keySet();
     }
 
+    // special atomic modifying
+    public Long increaseBy(String key, long by) {
+        synchronized (_holder) {
+            MapData md = _getOrLoadForPersist();
+            Map<String, Object> map = md.getMap();
+            Object value = map.get(key);
+            Long ret = null;
+            if (value instanceof Number) {
+                Number number = (Number) value;
+                ret = number.longValue() + by;
+                map.put(key, ret);
+            }
+            return ret;
+        }
+    }
+
+    public Long adjustGetDifference(String key, long target) {
+        synchronized (_holder) {
+            MapData md = _getOrLoadForPersist();
+            Map<String, Object> map = md.getMap();
+            Object value = map.get(key);
+            Long ret = null;
+            if (value instanceof Number) {
+                long cur = ((Number) value).longValue();
+                ret = target - cur;
+                map.put(key, target);
+            }
+            return ret;
+        }
+    }
+
+    public Long decreaseBy(String key, long by) {
+        synchronized (_holder) {
+            MapData md = _getOrLoadForPersist();
+            Map<String, Object> map = md.getMap();
+            Object value = map.get(key);
+            Long ret = null;
+            if (value instanceof Number) {
+                Number number = (Number) value;
+                ret = number.longValue() - 1;
+                map.put(key, ret);
+            }
+            return ret;
+        }
+    }
+
     // simple modifying
     @Override
     public Object put(String key, Object value) {
