@@ -15,6 +15,7 @@
  */
 package org.storedmap;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -87,13 +88,16 @@ public class Persister {
         }
     }
 
-    MapData scheduleForPersist(StoredMap storedMap) {
+    MapData scheduleForPersist(StoredMap storedMap, Runnable callback) {
         WeakHolder holder = storedMap.holder();
         synchronized (holder) {
             LOG.debug("Planning to save {}-{}", holder.getCategory().name(), holder.getKey());
             SaveOrReschedule command = _inWork.get(holder);
             if (command != null) {
                 command._reschedule = true;
+                if (callback != null) {
+                    command._callbacks.add(callback);
+                }
                 LOG.debug("Skipping saving {}-{} as rescheduled", holder.getCategory().name(), holder.getKey());
                 return command._mapData;
             } else {
@@ -114,6 +118,8 @@ public class Persister {
                     return mapData;
                 }
                 command = new SaveOrReschedule(storedMap, mapData);
+                command._callbacks.add(callback);
+
                 _inWork.put(holder, command);
                 _inLongWork.put(holder, command);
                 _mainIndexer.schedule(command, 3, TimeUnit.SECONDS);
@@ -131,6 +137,7 @@ public class Persister {
         private final WeakHolder _holder;
         private final MapData _mapData;
         private boolean _cancelSave = false;
+        private final ArrayList<Runnable> _callbacks = new ArrayList<>(2);
 
         public SaveOrReschedule(StoredMap sm, MapData md) {
             _sm = sm;
@@ -150,6 +157,8 @@ public class Persister {
                         _reschedule = false;
                         //SaveOrReschedule.this
                         SaveOrReschedule sor = new SaveOrReschedule(_sm, _mapData);
+                        sor._callbacks.addAll(_callbacks);
+
                         sor._cancelSave = _cancelSave;
                         _mainIndexer.schedule(sor, 2, TimeUnit.SECONDS);
                         LOG.debug("Rescheduling saving {}-{} as new info came. Queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
@@ -193,6 +202,9 @@ public class Persister {
                                                 _inLongWork.remove(_holder);
                                                 _holder.notify();
                                                 LOG.debug("Unlocked after full save of {}-{}", _holder.getCategory().name(), _holder.getKey());
+                                                for (Runnable callback : _callbacks) {
+                                                    callback.run();
+                                                }
                                             }
                                         });
                             } else {

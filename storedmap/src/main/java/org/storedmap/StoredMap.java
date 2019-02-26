@@ -112,7 +112,14 @@ public class StoredMap implements Map<String, Object>, Serializable {
 
     private MapData _getOrLoadForPersist() {
 
-        MapData md = _category.store().getPersister().scheduleForPersist(this);
+        MapData md = _category.store().getPersister().scheduleForPersist(this, null);
+        return md;
+
+    }
+
+    private MapData _getOrLoadForPersist(Runnable callback) {
+
+        MapData md = _category.store().getPersister().scheduleForPersist(this, callback);
         return md;
 
     }
@@ -182,9 +189,9 @@ public class StoredMap implements Map<String, Object>, Serializable {
         return getMapData().getSorter();
     }
 
-    public void sorter(Object sorter) {
+    public void sorter(Object sorter, Runnable callback) {
         synchronized (_holder) {
-            MapData map = _getOrLoadForPersist();
+            MapData map = _getOrLoadForPersist(callback);
             //System.out.println("putting sorter: " + sorter.toString() + " for key " + _holder.getKey());
             map.setSorter(sorter);
         }
@@ -194,9 +201,9 @@ public class StoredMap implements Map<String, Object>, Serializable {
         return getMapData().getSecondarKey();
     }
 
-    public void secondaryKey(String secondaryKey) {
+    public void secondaryKey(String secondaryKey, Runnable callback) {
         synchronized (_holder) {
-            MapData map = _getOrLoadForPersist();
+            MapData map = _getOrLoadForPersist(callback);
             //System.out.println("putting sorter: " + sorter.toString() + " for key " + _holder.getKey());
             map.setSecondaryKey(secondaryKey);
         }
@@ -211,9 +218,9 @@ public class StoredMap implements Map<String, Object>, Serializable {
         }
     }
 
-    public void tags(String[] tags) {
+    public void tags(String[] tags, Runnable callback) {
         synchronized (_holder) {
-            MapData map = _getOrLoadForPersist();
+            MapData map = _getOrLoadForPersist(callback);
             map.setTags(tags);
         }
     }
@@ -735,7 +742,7 @@ public class StoredMap implements Map<String, Object>, Serializable {
         }
 
         @Override
-        public boolean add(Object e) { // TODO: synch, lock
+        public boolean add(Object e) { // TODO: synch, lock//// - resolved?
             synchronized (StoredMap.this._holder) {
 
                 e = _ensureUnbacked(e);
