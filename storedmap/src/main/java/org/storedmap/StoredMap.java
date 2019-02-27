@@ -16,11 +16,7 @@
 package org.storedmap;
 
 import static org.storedmap.MapData.NOTAGSMAGICAL;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -31,7 +27,6 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Properties;
 import java.util.Set;
 import org.apache.commons.lang3.SerializationUtils;
 import org.slf4j.Logger;
@@ -43,7 +38,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Fyodor Kravchenko {@literal(<fedd@vsetec.com>)}
  */
-public class StoredMap implements Map<String, Object>, Serializable {
+public class StoredMap implements Map<String, Object> {
 
     private static final Logger LOG = LoggerFactory.getLogger(StoredMap.class);
 
@@ -73,43 +68,42 @@ public class StoredMap implements Map<String, Object>, Serializable {
         return _holder;
     }
 
-    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-
-        LOG.debug("Starting deserializing some StoredMap");
-        Properties properties = (Properties) in.readObject();
-        Store store = Store.getStore(properties);
-
-        String categoryName = (String) in.readObject();
-        Category category = store.get(categoryName);
-
-        String key = (String) in.readObject();
-        StoredMap another = category.map(key);
-
-        try {
-            Field fld = this.getClass().getDeclaredField("_category");
-            fld.setAccessible(true);
-            fld.set(this, category);
-            fld.setAccessible(false);
-
-            fld = this.getClass().getDeclaredField("_holder");
-            fld.setAccessible(true);
-            fld.set(this, another._holder);
-            fld.setAccessible(false);
-        } catch (IllegalAccessException | IllegalArgumentException | NoSuchFieldException | SecurityException e) {
-            throw new StoredMapException("Couldn't deserialize stored map with key " + key, e);
-        }
-
-        in.close();
-
-    }
-
-    private void writeObject(ObjectOutputStream out) throws IOException {
-        Store store = _category.store();
-        out.writeObject(store.properties());
-        out.writeChars(_category.name());
-        out.writeChars(_holder.getKey());
-    }
-
+//    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+//
+//        LOG.debug("Starting deserializing some StoredMap");
+//        Properties properties = (Properties) in.readObject();
+//        Store store = Store.getStore(properties);
+//
+//        String categoryName = (String) in.readObject();
+//        Category category = store.get(categoryName);
+//
+//        String key = (String) in.readObject();
+//        StoredMap another = category.map(key);
+//
+//        try {
+//            Field fld = this.getClass().getDeclaredField("_category");
+//            fld.setAccessible(true);
+//            fld.set(this, category);
+//            fld.setAccessible(false);
+//
+//            fld = this.getClass().getDeclaredField("_holder");
+//            fld.setAccessible(true);
+//            fld.set(this, another._holder);
+//            fld.setAccessible(false);
+//        } catch (IllegalAccessException | IllegalArgumentException | NoSuchFieldException | SecurityException e) {
+//            throw new StoredMapException("Couldn't deserialize stored map with key " + key, e);
+//        }
+//
+//        in.close();
+//
+//    }
+//
+//    private void writeObject(ObjectOutputStream out) throws IOException {
+//        Store store = _category.store();
+//        out.writeObject(store.properties());
+//        out.writeChars(_category.name());
+//        out.writeChars(_holder.getKey());
+//    }
     private MapData _getOrLoadForPersist() {
 
         MapData md = _category.store().getPersister().scheduleForPersist(this, null);
@@ -174,8 +168,10 @@ public class StoredMap implements Map<String, Object>, Serializable {
                 Store store = _category.store();
                 byte[] mapB = store.getDriver().get(key, _category.internalIndexName(), store.getConnection());
                 if (mapB != null) {
+                    LOG.debug("Went for map with id {} in {}, found", key, _category.name());
                     map = (MapData) SerializationUtils.deserialize(mapB);
                 } else {
+                    LOG.debug("Went for map with id {} in {}, DID NOT found", key, _category.name());
                     map = new MapData();
                 }
                 _holder.put(map);

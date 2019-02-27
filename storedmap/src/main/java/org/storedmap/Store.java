@@ -55,8 +55,7 @@ import java.util.Set;
  */
 public class Store implements Closeable {
 
-    private final static Map<Properties, Store> STORES = new HashMap<>();
-
+    //private final static Map<Properties, Store> STORES = new HashMap<>();
     /**
      * Gets the source object for all categories of stored maps, aka Store
      *
@@ -66,18 +65,18 @@ public class Store implements Closeable {
      * and additional database connection characteristics
      * @return the Store either previously created or new
      */
-    public static Store getStore(Properties properties) {
-        Store ret;
-        synchronized (STORES) {
-            ret = STORES.get(properties);
-            if (ret == null) {
-                ret = new Store(properties);
-                STORES.put(properties, ret);
-            }
-        }
-        return ret;
-    }
-
+//    public static Store getStore(Properties properties) {
+//        Store ret;
+//        synchronized (STORES) {
+//            ret = STORES.get(properties);
+//            if (ret == null) {
+//                ret = new Store(properties);
+//                STORES.put(properties, ret);
+//            }
+//        }
+//        ret = new Store(properties);
+//        return ret;
+//    }
     private final Map<String, Category> _categories = new HashMap<>();
 
     private final String _appCode;
@@ -91,7 +90,7 @@ public class Store implements Closeable {
         throw new UnsupportedOperationException();
     }
 
-    private Store(Properties properties) {
+    public Store(Properties properties) {
         Driver driver;
         String driverClassname = properties.getProperty("driver", "org.storedmap.jdbc.GenericJdbcDriver");
         try {
@@ -122,10 +121,11 @@ public class Store implements Closeable {
      */
     @Override
     public void close() {
-        synchronized (STORES) {
+        //synchronized (STORES) {
+        synchronized (this) {
             _persister.stop();
             _driver.closeConnection(_connection);
-            STORES.remove(_properties);
+            //STORES.remove(_properties);
         }
     }
 
