@@ -168,8 +168,8 @@ public class StoredMap implements Map<String, Object> {
                 Store store = _category.store();
                 byte[] mapB = store.getDriver().get(key, _category.internalIndexName(), store.getConnection());
                 if (mapB != null) {
-                    LOG.debug("Went for map with id {} in {}, found", key, _category.name());
                     map = (MapData) SerializationUtils.deserialize(mapB);
+                    LOG.debug("Went for map with id {} in {}, found {}", key, _category.name(), map.getMap());
                 } else {
                     LOG.debug("Went for map with id {} in {}, DID NOT found", key, _category.name());
                     map = new MapData();

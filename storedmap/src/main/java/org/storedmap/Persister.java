@@ -145,6 +145,24 @@ public class Persister {
             _holder = sm.holder();
         }
 
+        private boolean _tryReschedule() {
+            if (_reschedule) {
+                //_reschedule = false;
+
+                SaveOrReschedule sor = new SaveOrReschedule(_sm, _mapData);
+                sor._callbacks.addAll(_callbacks);
+
+                sor._cancelSave = _cancelSave;
+                _inWork.put(_holder, sor);
+                _mainIndexer.schedule(sor, 2, TimeUnit.SECONDS);
+                LOG.debug("Rescheduling saving {}-{} as new info came. Queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
+
+                return true;
+            } else {
+                return false;
+            }
+        }
+
         @Override
         public void run() {
 
@@ -153,16 +171,7 @@ public class Persister {
             try {
                 synchronized (_holder) {
 
-                    if (_reschedule) {
-                        _reschedule = false;
-                        //SaveOrReschedule.this
-                        SaveOrReschedule sor = new SaveOrReschedule(_sm, _mapData);
-                        sor._callbacks.addAll(_callbacks);
-
-                        sor._cancelSave = _cancelSave;
-                        _mainIndexer.schedule(sor, 2, TimeUnit.SECONDS);
-                        LOG.debug("Rescheduling saving {}-{} as new info came. Queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
-                        //System.out.println("*** rescheduling as added new info ***");
+                    if (_tryReschedule()) {
                         return;
                     }
 
@@ -183,7 +192,9 @@ public class Persister {
                         LOG.debug("Sending to save map data {}-{}; queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
                         driver.put(_holder.getKey(), indexName, connection, mapB, () -> {
                             LOG.debug("Sent to saved map data for {}-{}, proceed for index; queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
-                            _inWork.remove(_holder);
+                            if (!_tryReschedule()) {
+                                _inWork.remove(_holder);
+                            }
                         }, () -> {
                             if (!_cancelSave) {
                                 LOG.debug("Sending to save index for {}-{}; queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());

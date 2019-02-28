@@ -17,12 +17,16 @@ package org.storedmap;
 
 import java.lang.ref.WeakReference;
 import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author Fyodor Kravchenko {@literal(<fedd@vsetec.com>)}
  */
 public class WeakHolder {
+
+    private static final Logger LOG = LoggerFactory.getLogger(WeakHolder.class);
 
     private final String _key;
     private final Category _category;
@@ -57,7 +61,10 @@ public class WeakHolder {
                 curMap = null;
             }
             if (curMap != map) { // don't replace the object if we're reputting it
+                LOG.debug("Replacing MapData in WeakHolder, was {}, now {}", curMap, map.getMap());
                 _wr = new WeakReference<>(map);
+            } else {
+                LOG.debug("Retaining MapData in WeakHolder, which is {}", curMap);
             }
         }
     }
