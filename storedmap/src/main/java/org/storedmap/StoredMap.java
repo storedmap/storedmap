@@ -46,6 +46,7 @@ public class StoredMap implements Map<String, Object> {
     private final WeakHolder _holder;
     private final int _hash;
     transient boolean isRemoved = false;
+    transient boolean fastCreate = false;
 
     StoredMap(Category category, WeakHolder holder) {
         _category = category;
@@ -105,17 +106,22 @@ public class StoredMap implements Map<String, Object> {
 //        out.writeChars(_holder.getKey());
 //    }
     private MapData _getOrLoadForPersist() {
-
-        MapData md = _category.store().getPersister().scheduleForPersist(this, null);
-        return md;
+        synchronized (_holder) {
+            boolean oldFastCreate = fastCreate;
+            fastCreate = false;
+            MapData md = _category.store().getPersister().scheduleForPersist(this, null, oldFastCreate);
+            return md;
+        }
 
     }
 
     private MapData _getOrLoadForPersist(Runnable callback) {
-
-        MapData md = _category.store().getPersister().scheduleForPersist(this, callback);
-        return md;
-
+        synchronized (_holder) {
+            boolean oldFastCreate = fastCreate;
+            fastCreate = false;
+            MapData md = _category.store().getPersister().scheduleForPersist(this, callback, oldFastCreate);
+            return md;
+        }
     }
 
     public void remove() {

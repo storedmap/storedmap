@@ -268,6 +268,30 @@ public class Category implements Map<String, Map<String, Object>> {
     }
 
     /**
+     * Fast {@link StoredMap} creation with the specified id
+     *
+     * <p>
+     * The calling procedure should privide an completely new id that is not
+     * present in the database, for example, a newly created UUID. </p>
+     *
+     * <p>
+     * The procedure doesn't check for existance of a stored map with the
+     * specified id and simply creates it. This allows the system to invoke the
+     * underlying storage asynchronously. Until the map is not stored in the
+     * actual persistent storage, it is cached by its identifier so that
+     * subsequent modifications are written to the same map
+     *
+     * @param key a unique identifier absent from the database prior to this
+     * call
+     * @return the newly created StoredMap object
+     */
+    public StoredMap create(String key) {
+        StoredMap ret = map(key);
+        ret.fastCreate = true;
+        return ret;
+    }
+
+    /**
      * Gets an iterable of all StoredMaps in this Category.
      *
      * <p>

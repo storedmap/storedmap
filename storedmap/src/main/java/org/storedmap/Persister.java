@@ -88,7 +88,7 @@ public class Persister {
         }
     }
 
-    MapData scheduleForPersist(StoredMap storedMap, Runnable callback) {
+    MapData scheduleForPersist(StoredMap storedMap, Runnable callback, boolean deferredCreate) {
         WeakHolder holder = storedMap.holder();
         synchronized (holder) {
             LOG.debug("Planning to save {}-{}", holder.getCategory().name(), holder.getKey());
@@ -101,23 +101,34 @@ public class Persister {
                 LOG.debug("Skipping saving {}-{} as rescheduled", holder.getCategory().name(), holder.getKey());
                 return command._mapData;
             } else {
-                long waitForLock;
-                // wait for releasing on other machines then lock for ourselves
-                while ((waitForLock = _store.getDriver().tryLock(holder.getKey(), storedMap.category().internalIndexName(), _store.getConnection(), 100000)) > 0) {
-                    try {
-                        LOG.warn("Waiting " + storedMap.category().internalIndexName() + " for " + waitForLock);
-                        holder.wait(waitForLock > 5000 ? 2000 : waitForLock); // check every 2 seconds
-                    } catch (InterruptedException ex) {
-                        throw new RuntimeException("Unexpected interruption", ex);
+
+                MapData mapData;
+
+                if (!deferredCreate) {
+
+                    long waitForLock;
+                    // wait for releasing on other machines then lock for ourselves
+                    while ((waitForLock = _store.getDriver().tryLock(holder.getKey(), storedMap.category().internalIndexName(), _store.getConnection(), 100000)) > 0) {
+                        try {
+                            LOG.warn("Waiting " + storedMap.category().internalIndexName() + " for " + waitForLock);
+                            holder.wait(waitForLock > 5000 ? 2000 : waitForLock); // check every 2 seconds
+                        } catch (InterruptedException ex) {
+                            throw new RuntimeException("Unexpected interruption", ex);
+                        }
                     }
+
+                    mapData = storedMap.getMapData();
+                    if (storedMap.isRemoved) {
+                        LOG.warn("Map {}-{} turned out to be removed, exiting", holder.getCategory().name(), holder.getKey());
+                        return mapData;
+                    }
+
+                } else {
+                    mapData = new MapData();
+                    holder.put(mapData);
                 }
 
-                MapData mapData = storedMap.getMapData();
-                if (storedMap.isRemoved) {
-                    LOG.warn("Map {}-{} turned out to be removed, exiting", holder.getCategory().name(), holder.getKey());
-                    return mapData;
-                }
-                command = new SaveOrReschedule(storedMap, mapData);
+                command = new SaveOrReschedule(storedMap, mapData, deferredCreate);
                 command._callbacks.add(callback);
 
                 _inWork.put(holder, command);
@@ -133,13 +144,15 @@ public class Persister {
     private class SaveOrReschedule implements Runnable {
 
         private boolean _reschedule = false;
+        private final boolean _deferredCreate;
         private final StoredMap _sm;
         private final WeakHolder _holder;
         private final MapData _mapData;
         private boolean _cancelSave = false;
         private final ArrayList<Runnable> _callbacks = new ArrayList<>(2);
 
-        public SaveOrReschedule(StoredMap sm, MapData md) {
+        public SaveOrReschedule(StoredMap sm, MapData md, boolean deferredCreate) {
+            _deferredCreate = deferredCreate;
             _sm = sm;
             _mapData = md;
             _holder = sm.holder();
@@ -149,7 +162,7 @@ public class Persister {
             if (_reschedule) {
                 //_reschedule = false;
 
-                SaveOrReschedule sor = new SaveOrReschedule(_sm, _mapData);
+                SaveOrReschedule sor = new SaveOrReschedule(_sm, _mapData, _deferredCreate);
                 sor._callbacks.addAll(_callbacks);
 
                 sor._cancelSave = _cancelSave;
@@ -175,12 +188,35 @@ public class Persister {
                         return;
                     }
 
-                    Category category = _sm.category();
-
-                    byte[] mapB = SerializationUtils.serialize(_mapData);
                     Driver driver = _store.getDriver();
                     Object connection = _store.getConnection();
+                    Category category = _sm.category();
                     String indexName = category.internalIndexName();
+
+                    if (_deferredCreate) {
+
+                        LOG.debug("Locking to create map data {}-{}; queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
+
+                        long waitForLock;
+                        // wait for releasing on other machines then lock for ourselves
+                        while ((waitForLock = _store.getDriver().tryLock(_holder.getKey(), _sm.category().internalIndexName(), _store.getConnection(), 100000)) > 0) {
+                            try {
+                                LOG.warn("Waiting " + _sm.category().internalIndexName() + " for " + waitForLock);
+                                _holder.wait(waitForLock > 5000 ? 2000 : waitForLock); // check every 2 seconds
+                            } catch (InterruptedException ex) {
+                                throw new RuntimeException("Unexpected interruption", ex);
+                            }
+                        }
+
+                        if (_sm.isRemoved) {
+                            LOG.warn("Map {}-{} turned out to be removed, exiting", _holder.getCategory().name(), _holder.getKey());
+                            driver.unlock(_holder.getKey(), indexName, connection);
+                            return;
+                        }
+
+                    }
+
+                    byte[] mapB = SerializationUtils.serialize(_mapData);
 
                     // data for additional index
                     Map<String, Object> mapDataMap = _mapData.getMap();
