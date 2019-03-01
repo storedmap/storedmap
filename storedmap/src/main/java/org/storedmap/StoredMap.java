@@ -45,7 +45,7 @@ public class StoredMap implements Map<String, Object> {
     private final Category _category;
     private final WeakHolder _holder;
     private final int _hash;
-    transient boolean isRemoved = false;
+    //transient boolean isRemoved = false;
     transient boolean fastCreate = false;
 
     StoredMap(Category category, WeakHolder holder) {
@@ -109,7 +109,7 @@ public class StoredMap implements Map<String, Object> {
         synchronized (_holder) {
             boolean oldFastCreate = fastCreate;
             fastCreate = false;
-            MapData md = _category.store().getPersister().scheduleForPersist(this, null, oldFastCreate);
+            MapData md = _category.store().getPersister().scheduleForPersist(this, null, oldFastCreate, false);
             return md;
         }
 
@@ -119,7 +119,7 @@ public class StoredMap implements Map<String, Object> {
         synchronized (_holder) {
             boolean oldFastCreate = fastCreate;
             fastCreate = false;
-            MapData md = _category.store().getPersister().scheduleForPersist(this, callback, oldFastCreate);
+            MapData md = _category.store().getPersister().scheduleForPersist(this, callback, oldFastCreate, false);
             return md;
         }
     }
@@ -132,36 +132,19 @@ public class StoredMap implements Map<String, Object> {
 
             Store store = _category.store();
 
-            store.getPersister().cancelSave(_holder);
-
-            Driver driver = store.getDriver();
-
-            //if (!_category.store().getPersister().isInWork(_holder)) 
-            {
-                long waitForLock;
-                // wait for releasing on other machines then lock for ourselves
-                while ((waitForLock = driver.tryLock(_holder.getKey(), _category.internalIndexName(), store.getConnection(), 100000)) > 0) {
-                    try {
-                        _holder.wait(waitForLock > 5000 ? 2000 : waitForLock); // check every 2 seconds
-                    } catch (InterruptedException ex) {
-                        throw new RuntimeException("Unexpected interruption", ex);
-                    }
-                }
-            }
-
-            isRemoved = true;
+            store.getPersister().scheduleForPersist(this, null, false, true);//cancelSave(_holder);
 
             _category.removeFromCache(_holder.getKey());
-            driver.remove(_holder.getKey(), _category.internalIndexName(), store.getConnection(), new Runnable() {
-                @Override
-                public void run() {
-                    synchronized (_holder) {
-                        driver.unlock(_holder.getKey(), _category.internalIndexName(), store.getConnection());
-                        _holder.notify();
-                        LOG.debug("Removed {}-{}", _holder.getCategory().name(), _holder.getKey());
-                    }
-                }
-            });
+//            driver.remove(_holder.getKey(), _category.internalIndexName(), store.getConnection(), new Runnable() {
+//                @Override
+//                public void run() {
+//                    synchronized (_holder) {
+//                        driver.unlock(_holder.getKey(), _category.internalIndexName(), store.getConnection());
+//                        _holder.notify();
+//                        LOG.debug("Removed {}-{}", _holder.getCategory().name(), _holder.getKey());
+//                    }
+//                }
+//            });
 
         }
     }

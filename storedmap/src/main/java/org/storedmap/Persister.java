@@ -71,56 +71,83 @@ public class Persister {
 
     }
 
-    void cancelSave(WeakHolder holder) {
-        synchronized (holder) {
-            SaveOrReschedule sor = _inLongWork.get(holder);
-            if (sor != null) {
-                sor._cancelSave = true;
-//                Driver driver = _store.getDriver();
-//                Object connection = _store.getConnection();
-//                String indexName = sor._sm.category().internalIndexName();
-//                _inWork.remove(holder);
-//                driver.unlock(holder.getKey(), indexName, connection);
-//                _inLongWork.remove(holder);
-//                holder.notify();
-                LOG.debug("Cancelling save of {}-{}", holder.getCategory().name(), holder.getKey());
+//    boolean cancelSave(WeakHolder holder) {
+//        synchronized (holder) {
+//            SaveOrReschedule sor = _inLongWork.get(holder);
+//            if (sor != null) {
+//                sor._cancelSave = true;
+//                LOG.debug("Cancelling save of {}-{}", holder.getCategory().name(), holder.getKey());
+//                return true;
+//            }else{
+//                return false;
+//            }
+//        }
+//    }
+//
+    private void _remove(WeakHolder holder, StoredMap storedMap, Runnable callback) {
+        _store.getDriver().remove(holder.getKey(), storedMap.category().internalIndexName(), _store.getConnection(), new Runnable() {
+            @Override
+            public void run() {
+                synchronized (holder) {
+                    _store.getDriver().unlock(holder.getKey(), storedMap.category().internalIndexName(), _store.getConnection());
+                    holder.notify();
+                    LOG.debug("Removed {}-{}", holder.getCategory().name(), holder.getKey());
+                    callback.run();
+                }
             }
-        }
+        });
+
     }
 
-    MapData scheduleForPersist(StoredMap storedMap, Runnable callback, boolean deferredCreate) {
+    MapData scheduleForPersist(StoredMap storedMap, Runnable callback, boolean deferredCreate, boolean needRemove) {
         WeakHolder holder = storedMap.holder();
         synchronized (holder) {
-            LOG.debug("Planning to save {}-{}", holder.getCategory().name(), holder.getKey());
+            LOG.debug("Planning to {} {}-{}", needRemove ? "remove" : "save", holder.getCategory().name(), holder.getKey());
             SaveOrReschedule command = _inWork.get(holder);
             if (command != null) {
-                command._reschedule = true;
+
+                if (needRemove) {
+                    command._needRemove = true;
+                    _remove(holder, storedMap, callback);
+                    MapData mapData = new MapData();
+                    holder.put(mapData);
+                    _inWork.remove(holder);
+                    _inLongWork.remove(holder);
+                    return mapData;
+                } else {
+                    command._reschedule = true;
+                }
+
                 if (callback != null) {
                     command._callbacks.add(callback);
                 }
+
                 LOG.debug("Skipping saving {}-{} as rescheduled", holder.getCategory().name(), holder.getKey());
                 return command._mapData;
             } else {
 
                 MapData mapData;
 
-                if (!deferredCreate) {
+                if (!deferredCreate || needRemove) {
 
                     long waitForLock;
                     // wait for releasing on other machines then lock for ourselves
                     while ((waitForLock = _store.getDriver().tryLock(holder.getKey(), storedMap.category().internalIndexName(), _store.getConnection(), 100000)) > 0) {
                         try {
-                            LOG.warn("Waiting " + storedMap.category().internalIndexName() + " for " + waitForLock);
+                            LOG.warn("Waiting {} for {} in main persist schedule{}", storedMap.category().internalIndexName(), waitForLock, needRemove ? " for remove" : "");
                             holder.wait(waitForLock > 5000 ? 2000 : waitForLock); // check every 2 seconds
                         } catch (InterruptedException ex) {
                             throw new RuntimeException("Unexpected interruption", ex);
                         }
                     }
 
-                    mapData = storedMap.getMapData();
-                    if (storedMap.isRemoved) {
-                        LOG.warn("Map {}-{} turned out to be removed, exiting", holder.getCategory().name(), holder.getKey());
+                    if (needRemove) {
+                        _remove(holder, storedMap, callback);
+                        mapData = new MapData();
+                        holder.put(mapData);
                         return mapData;
+                    } else {
+                        mapData = storedMap.getMapData();
                     }
 
                 } else {
@@ -144,12 +171,14 @@ public class Persister {
     private class SaveOrReschedule implements Runnable {
 
         private boolean _reschedule = false;
+        private boolean _needRemove = false;
         private final boolean _deferredCreate;
         private final StoredMap _sm;
         private final WeakHolder _holder;
         private final MapData _mapData;
-        private boolean _cancelSave = false;
+        //private boolean _cancelSave = false;
         private final ArrayList<Runnable> _callbacks = new ArrayList<>(2);
+        private boolean _lockedInFirstReschedule = false;
 
         public SaveOrReschedule(StoredMap sm, MapData md, boolean deferredCreate) {
             _deferredCreate = deferredCreate;
@@ -164,9 +193,10 @@ public class Persister {
 
                 SaveOrReschedule sor = new SaveOrReschedule(_sm, _mapData, _deferredCreate);
                 sor._callbacks.addAll(_callbacks);
-
-                sor._cancelSave = _cancelSave;
+                sor._lockedInFirstReschedule = _lockedInFirstReschedule;
+                sor._needRemove = _needRemove;
                 _inWork.put(_holder, sor);
+                _inLongWork.put(_holder, sor);
                 _mainIndexer.schedule(sor, 2, TimeUnit.SECONDS);
                 LOG.debug("Rescheduling saving {}-{} as new info came. Queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
 
@@ -184,6 +214,10 @@ public class Persister {
             try {
                 synchronized (_holder) {
 
+                    if (_needRemove) {
+                        return;
+                    }
+
                     if (_tryReschedule()) {
                         return;
                     }
@@ -193,7 +227,7 @@ public class Persister {
                     Category category = _sm.category();
                     String indexName = category.internalIndexName();
 
-                    if (_deferredCreate) {
+                    if (_deferredCreate && !_lockedInFirstReschedule) { // lock only once in case of rescheduling a deferred saver
 
                         LOG.debug("Locking to create map data {}-{}; queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
 
@@ -201,18 +235,14 @@ public class Persister {
                         // wait for releasing on other machines then lock for ourselves
                         while ((waitForLock = _store.getDriver().tryLock(_holder.getKey(), _sm.category().internalIndexName(), _store.getConnection(), 100000)) > 0) {
                             try {
-                                LOG.warn("Waiting " + _sm.category().internalIndexName() + " for " + waitForLock);
+                                LOG.warn("Waiting {} for {} in deferred creation", _sm.category().internalIndexName(), waitForLock);
                                 _holder.wait(waitForLock > 5000 ? 2000 : waitForLock); // check every 2 seconds
                             } catch (InterruptedException ex) {
                                 throw new RuntimeException("Unexpected interruption", ex);
                             }
                         }
 
-                        if (_sm.isRemoved) {
-                            LOG.warn("Map {}-{} turned out to be removed, exiting", _holder.getCategory().name(), _holder.getKey());
-                            driver.unlock(_holder.getKey(), indexName, connection);
-                            return;
-                        }
+                        _lockedInFirstReschedule = true;
 
                     }
 
@@ -224,15 +254,19 @@ public class Persister {
                     String[] tags = _mapData.getTags();
                     String secondaryKey = _mapData.getSecondarKey();
 
-                    if (!_cancelSave) {
-                        LOG.debug("Sending to save map data {}-{}; queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
-                        driver.put(_holder.getKey(), indexName, connection, mapB, () -> {
-                            LOG.debug("Sent to saved map data for {}-{}, proceed for index; queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
-                            if (!_tryReschedule()) {
-                                _inWork.remove(_holder);
+                    LOG.debug("Sending to save map data {}-{}; queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
+                    driver.put(_holder.getKey(), indexName, connection, mapB, () -> {
+                        LOG.debug("Sent to saved map data for {}-{}, proceed for index; queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
+                        synchronized (_holder) {
+                            if (!_needRemove) {
+                                if (!_tryReschedule()) {
+                                    _inWork.remove(_holder);
+                                }
                             }
-                        }, () -> {
-                            if (!_cancelSave) {
+                        }
+                    }, () -> {
+                        synchronized (_holder) {
+                            if (!_needRemove) {
                                 LOG.debug("Sending to save index for {}-{}; queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
                                 driver.put(
                                         _holder.getKey(),
@@ -254,20 +288,9 @@ public class Persister {
                                                 }
                                             }
                                         });
-                            } else {
-                                LOG.debug("Cancelled saving after main data and before indexing {}-{}, unlocking; queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
-                                driver.unlock(_holder.getKey(), indexName, connection);
-                                _inLongWork.remove(_holder);
-                                _holder.notify();
                             }
-                        });
-                    } else {
-                        LOG.debug("Cancelled saving before main data is sent to save {}-{}, unlocking; queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
-                        _inWork.remove(_holder);
-                        driver.unlock(_holder.getKey(), indexName, connection);
-                        _inLongWork.remove(_holder);
-                        _holder.notify();
-                    }
+                        }
+                    });
 
                 }
             } catch (Exception e) {
