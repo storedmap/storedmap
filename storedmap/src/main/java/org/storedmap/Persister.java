@@ -71,19 +71,6 @@ public class Persister {
 
     }
 
-//    boolean cancelSave(WeakHolder holder) {
-//        synchronized (holder) {
-//            SaveOrReschedule sor = _inLongWork.get(holder);
-//            if (sor != null) {
-//                sor._cancelSave = true;
-//                LOG.debug("Cancelling save of {}-{}", holder.getCategory().name(), holder.getKey());
-//                return true;
-//            }else{
-//                return false;
-//            }
-//        }
-//    }
-//
     private void _remove(WeakHolder holder, StoredMap storedMap, Runnable callback) {
         _store.getDriver().remove(holder.getKey(), storedMap.category().internalIndexName(), _store.getConnection(), new Runnable() {
             @Override
@@ -92,7 +79,9 @@ public class Persister {
                     _store.getDriver().unlock(holder.getKey(), storedMap.category().internalIndexName(), _store.getConnection());
                     holder.notify();
                     LOG.debug("Removed {}-{}", holder.getCategory().name(), holder.getKey());
-                    callback.run();
+                    if (callback != null) {
+                        callback.run();
+                    }
                 }
             }
         });
