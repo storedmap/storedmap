@@ -119,12 +119,30 @@ public class Persister {
 
                 if (!deferredCreate || needRemove) {
 
-                    long waitForLock;
+                    if (!needRemove) {
+                        SaveOrReschedule anotherSor = _inLongWork.get(holder);
+                        if (anotherSor != null) { // we are working with it! let's keep it locked for ourselves
+                            // add a followup
+                            mapData = anotherSor._mapData; // this doesn't go to database as it is kept in long work command
+
+                            if (anotherSor._followup != null) {
+                                command = anotherSor._followup;
+                            } else {
+                                command = new SaveOrReschedule(storedMap, mapData, deferredCreate);
+                                anotherSor._followup = command;
+                            }
+                            command._callbacks.add(callback);
+                            // no need to check for lock
+                            return mapData;
+                        }
+                    }
+
+                    Driver.Lock waitForLock;
                     // wait for releasing on other machines then lock for ourselves
-                    while ((waitForLock = _store.getDriver().tryLock(holder.getKey(), storedMap.category().internalIndexName(), _store.getConnection(), 100000)) > 0) {
+                    while ((waitForLock = _store.getDriver().tryLock(holder.getKey(), storedMap.category().internalIndexName(), _store.getConnection(), 100000, _store.sessionId)).getWaitTime() > 0) {
                         try {
                             LOG.warn("Waiting {} for {} in main persist schedule{}", storedMap.category().internalIndexName(), waitForLock, needRemove ? " for remove" : "");
-                            holder.wait(waitForLock > 5000 ? 2000 : waitForLock); // check every 2 seconds
+                            holder.wait(waitForLock.getWaitTime() > 5000 ? 2000 : waitForLock.getWaitTime()); // check every 2 seconds
                         } catch (InterruptedException ex) {
                             throw new RuntimeException("Unexpected interruption", ex);
                         }
@@ -168,6 +186,7 @@ public class Persister {
         //private boolean _cancelSave = false;
         private final ArrayList<Runnable> _callbacks = new ArrayList<>(2);
         private boolean _lockedInFirstReschedule = false;
+        private SaveOrReschedule _followup = null;
 
         public SaveOrReschedule(StoredMap sm, MapData md, boolean deferredCreate) {
             _deferredCreate = deferredCreate;
@@ -220,12 +239,12 @@ public class Persister {
 
                         LOG.debug("Locking to create map data {}-{}; queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
 
-                        long waitForLock;
+                        Driver.Lock waitForLock;
                         // wait for releasing on other machines then lock for ourselves
-                        while ((waitForLock = _store.getDriver().tryLock(_holder.getKey(), _sm.category().internalIndexName(), _store.getConnection(), 100000)) > 0) {
+                        while ((waitForLock = _store.getDriver().tryLock(_holder.getKey(), _sm.category().internalIndexName(), _store.getConnection(), 100000, _store.sessionId)).getWaitTime() > 0) {
                             try {
                                 LOG.warn("Waiting {} for {} in deferred creation", _sm.category().internalIndexName(), waitForLock);
-                                _holder.wait(waitForLock > 5000 ? 2000 : waitForLock); // check every 2 seconds
+                                _holder.wait(waitForLock.getWaitTime() > 5000 ? 2000 : waitForLock.getWaitTime()); // check every 2 seconds
                             } catch (InterruptedException ex) {
                                 throw new RuntimeException("Unexpected interruption", ex);
                             }
@@ -268,10 +287,19 @@ public class Persister {
                                         tags, () -> {
                                             LOG.debug("Fully finished saving {}-{}; queue size={}", _holder.getCategory().name(), _holder.getKey(), ((ScheduledThreadPoolExecutor) _mainIndexer).getQueue().size());
                                             synchronized (_holder) {
-                                                driver.unlock(_holder.getKey(), indexName, connection);
-                                                _inLongWork.remove(_holder);
+
+                                                if (_followup != null) {
+                                                    //don't  unlock but run a followup!
+                                                    _inWork.put(_holder, _followup);
+                                                    _inLongWork.put(_holder, _followup);
+                                                    _mainIndexer.schedule(_followup, 3, TimeUnit.SECONDS);
+                                                    LOG.debug("Fully saved {}-{} but have a followup. Keep the lock", _holder.getCategory().name(), _holder.getKey());
+                                                } else {
+                                                    driver.unlock(_holder.getKey(), indexName, connection);
+                                                    _inLongWork.remove(_holder);
+                                                    LOG.debug("Unlocked after full save of {}-{}", _holder.getCategory().name(), _holder.getKey());
+                                                }
                                                 _holder.notify();
-                                                LOG.debug("Unlocked after full save of {}-{}", _holder.getCategory().name(), _holder.getKey());
                                                 for (Runnable callback : _callbacks) {
                                                     callback.run();
                                                 }

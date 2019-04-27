@@ -172,7 +172,7 @@ public class Util {
             String indexId = null;
 
             long waitForLock;
-            while ((waitForLock = driver.tryLock("100", indexIndexStorageName, con, 10000)) > 0) {
+            while ((waitForLock = driver.tryLock("100", indexIndexStorageName, con, 10000, store.sessionId).getWaitTime()) > 0) {
                 try {
                     Thread.sleep(waitForLock > 100 ? 100 : waitForLock);
                 } catch (InterruptedException ex) {

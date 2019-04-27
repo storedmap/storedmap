@@ -122,8 +122,8 @@ public class MixedDriver implements Driver<MixedDriver.MixedConnection> {
     }
 
     @Override
-    public int tryLock(String key, String indexName, MixedConnection connection, int milliseconds) {
-        return connection._lockDriver.tryLock(key, indexName, connection._lockConnection, milliseconds);
+    public Lock tryLock(String key, String indexName, MixedConnection connection, int milliseconds, String sessionId) {
+        return connection._lockDriver.tryLock(key, indexName, connection._lockConnection, milliseconds, sessionId);
     }
 
     @Override

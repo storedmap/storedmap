@@ -206,10 +206,20 @@ public interface Driver<T> {
      * @param connection object that represents the connection
      * @param milliseconds the maximum amount of time the new lock is active
      * before it will be automatically considered to be released
-     * @return number of milliseconds left to wait or a zero or negative value
-     * if lock was performed
+     * @param lockerSession id of the Store session that applied for lock
+     * @return an object with number of milliseconds left to wait or a zero or
+     * negative value if the lock was performed, and an id of the Store session
+     * that created that lock
      */
-    int tryLock(String key, String indexName, T connection, int milliseconds);
+    Lock tryLock(String key, String indexName, T connection, int milliseconds, String lockerSession);
+
+    public interface Lock {
+
+        int getWaitTime();
+
+        String getLockerSession();
+
+    }
 
     /**
      * Unlock the key in the specified index.

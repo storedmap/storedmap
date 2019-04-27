@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * A database representation.
@@ -85,6 +86,7 @@ public class Store implements Closeable {
     private final Properties _properties;
     private final Persister _persister = new Persister(this);
     private final int _hash;
+    protected final String sessionId = UUID.randomUUID().toString();
 
     private Store() {
         throw new UnsupportedOperationException();
