@@ -18,8 +18,6 @@ package org.storedmap;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -38,7 +36,8 @@ public class Persister {
     private final Store _store;
     private final ConcurrentHashMap<WeakHolder, SaveOrReschedule> _inWork = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<WeakHolder, SaveOrReschedule> _inLongWork = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService _mainIndexer = Executors.newScheduledThreadPool(5, new ThreadFactory() {
+    private final ScheduledThreadPoolExecutor _mainIndexer = new ScheduledThreadPoolExecutor(100, new ThreadFactory() {
+
         private int _num = 0;
 
         @Override
@@ -49,6 +48,11 @@ public class Persister {
     });
 
     Persister(Store store) {
+
+        _mainIndexer.setKeepAliveTime(1, TimeUnit.MINUTES);
+        _mainIndexer.allowCoreThreadTimeOut(true);
+        _mainIndexer.setMaximumPoolSize(Integer.MAX_VALUE);
+
         _store = store;
     }
 
