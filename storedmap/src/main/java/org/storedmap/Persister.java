@@ -36,7 +36,7 @@ public class Persister {
     private final Store _store;
     private final ConcurrentHashMap<WeakHolder, SaveOrReschedule> _inWork = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<WeakHolder, SaveOrReschedule> _inLongWork = new ConcurrentHashMap<>();
-    private final ScheduledThreadPoolExecutor _mainIndexer = new ScheduledThreadPoolExecutor(100, new ThreadFactory() {
+    private final ScheduledThreadPoolExecutor _mainIndexer = new ScheduledThreadPoolExecutor(10, new ThreadFactory() {
 
         private int _num = 0;
 
@@ -135,7 +135,9 @@ public class Persister {
                                 command = new SaveOrReschedule(storedMap, mapData, deferredCreate);
                                 anotherSor._followup = command;
                             }
-                            command._callbacks.add(callback);
+                            if (callback != null) {
+                                command._callbacks.add(callback);
+                            }
                             // no need to check for lock
                             return mapData;
                         }
@@ -167,7 +169,9 @@ public class Persister {
                 }
 
                 command = new SaveOrReschedule(storedMap, mapData, deferredCreate);
-                command._callbacks.add(callback);
+                if (callback != null) {
+                    command._callbacks.add(callback);
+                }
 
                 _inWork.put(holder, command);
                 _inLongWork.put(holder, command);
