@@ -36,7 +36,7 @@ public class Persister {
     private final Store _store;
     private final ConcurrentHashMap<WeakHolder, SaveOrReschedule> _inWork = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<WeakHolder, SaveOrReschedule> _inLongWork = new ConcurrentHashMap<>();
-    private final ScheduledThreadPoolExecutor _mainIndexer = new ScheduledThreadPoolExecutor(10, new ThreadFactory() {
+    private final ScheduledThreadPoolExecutor _mainIndexer = new ScheduledThreadPoolExecutor(90, new ThreadFactory() {
 
         private int _num = 0;
 
@@ -48,10 +48,6 @@ public class Persister {
     });
 
     Persister(Store store) {
-
-        _mainIndexer.setKeepAliveTime(1, TimeUnit.MINUTES);
-        _mainIndexer.allowCoreThreadTimeOut(true);
-        _mainIndexer.setMaximumPoolSize(Integer.MAX_VALUE);
 
         _store = store;
     }
