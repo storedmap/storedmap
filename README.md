@@ -12,6 +12,11 @@ is provided. The library expects the underlying database to be able to store bin
 specifying String tags, sortable objects and Json representation to provide an ability to search 
 and order the StoredMap instances by the selected information bits.
 
+Drivers
+-------
+
+See https://github.com/storedmap for the generic JDBC driver and an Elasticsearch driver.
+
 Examples
 --------
 
