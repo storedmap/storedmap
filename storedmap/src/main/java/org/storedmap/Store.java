@@ -28,15 +28,10 @@ import java.util.UUID;
  * A database representation.
  *
  * <p>
- * The class holds static references to multiple instances of itself, unique for
- * the database type, database connections string that defines a database of the
- * type, properties that affect the database connection, and the application
- * code which is used to distinguish indexes or tables created in the database
- * that belong to different applications.</p>
- *
- * The specific Store is retrieved or created by the static
- * {@link #getStore(Properties)} method.
- *
+ * An object of this class represents a database and is initialized with the 
+ * properties object that contains data to connect to the underlying database.
+ * </p>
+ * 
  * <p>
  * The two main properties are:</p>
  *
@@ -49,7 +44,9 @@ import java.util.UUID;
  * <p>
  * The same properties list may contain the configuration items that the driver
  * will use. It is advised that these additional properties have some driver
- * specific prefix</p>
+ * specific prefix. Examples of the additional properties are the JDBC 
+ * connection string, credentials and the JDBC driver name. (Note that the JDBC 
+ * driver is different to the Storedmap driver)</p>
  *
  *
  * @author Fyodor Kravchenko {@literal(<fedd@vsetec.com>)}
