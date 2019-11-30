@@ -45,7 +45,26 @@ public class StoredMaps implements Iterable<StoredMap> {
     @Override
     public Iterator<StoredMap> iterator() {
 
+        Iterator<String> keyIter = keyIterator();
+
         return new Iterator<StoredMap>() {
+            @Override
+            public boolean hasNext() {
+                return keyIter.hasNext();
+            }
+
+            @Override
+            public StoredMap next() {
+                return _category.map(keyIter.next());
+            }
+
+        };
+
+    }
+
+    Iterator<String> keyIterator() {
+
+        return new Iterator<String>() {
 
             private Iterator<String> _i = _iterable.iterator();
             private final Set<String> _keyCache;
@@ -71,7 +90,7 @@ public class StoredMaps implements Iterable<StoredMap> {
             }
 
             @Override
-            public StoredMap next() {
+            public String next() {
                 String nextKey;
                 try {
 
@@ -89,10 +108,9 @@ public class StoredMaps implements Iterable<StoredMap> {
                         throw e;
                     }
                 }
-                return _category.map(nextKey);
+                return nextKey;
             }
         };
 
     }
-
 }

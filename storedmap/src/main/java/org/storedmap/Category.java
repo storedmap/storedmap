@@ -304,6 +304,15 @@ public class Category implements Map<String, Map<String, Object>> {
         return new StoredMaps(this, _driver.get(_indexName, _connection), true);
     }
 
+    public Iterable<String> keys() {
+        return new Iterable<String>() {
+            @Override
+            public Iterator<String> iterator() {
+                return new StoredMaps(Category.this, _driver.get(_indexName, _connection), true).keyIterator();
+            }
+        };
+    }
+
     /**
      * Gets the iterable collection of StoredMaps that conform with the
      * database-specific query, have a
@@ -330,6 +339,23 @@ public class Category implements Map<String, Map<String, Object>> {
         byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
         return new StoredMaps(this, _driver.get(_indexName, _connection, secondaryKey, min, max, anyOfTags, ascending, textQuery));
+    }
+
+    public Iterable<String> keys(String secondaryKey, Object minSorter, Object maxSorter, String[] anyOfTags, Boolean ascending, String textQuery) {
+        final String[] anyOfTagsFinal;
+        if (anyOfTags == null || anyOfTags.length == 0) {
+            anyOfTagsFinal = new String[]{MapData.NOTAGSMAGICAL};
+        } else {
+            anyOfTagsFinal = anyOfTags;
+        }
+        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        return new Iterable<String>() {
+            @Override
+            public Iterator<String> iterator() {
+                return new StoredMaps(Category.this, _driver.get(_indexName, _connection, secondaryKey, min, max, anyOfTagsFinal, ascending, textQuery)).keyIterator();
+            }
+        };
     }
 
     /**
@@ -359,6 +385,20 @@ public class Category implements Map<String, Map<String, Object>> {
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
             ret.add(map);
+        }
+        return Collections.unmodifiableList(ret);
+    }
+
+    public List<String> keys(String secondaryKey, Object minSorter, Object maxSorter, String[] anyOfTags, Boolean ascending, String textQuery, int from, int size) {
+        if (anyOfTags == null || anyOfTags.length == 0) {
+            anyOfTags = new String[]{MapData.NOTAGSMAGICAL};
+        }
+        byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
+        Iterator<String> keys = new StoredMaps(this, _driver.get(_indexName, _connection, secondaryKey, min, max, anyOfTags, ascending, textQuery, from, size)).keyIterator();
+        ArrayList<String> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
+        while (keys.hasNext()) {
+            ret.add(keys.next());
         }
         return Collections.unmodifiableList(ret);
     }
