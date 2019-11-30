@@ -559,20 +559,8 @@ public class Category implements Map<String, Map<String, Object>> {
             @Override
             public Iterator<String> iterator() {
 
-                Iterator<StoredMap> i = Category.this.maps().iterator();
+                return Category.this.keys().iterator();
 
-                return new Iterator<String>() {
-
-                    @Override
-                    public boolean hasNext() {
-                        return i.hasNext();
-                    }
-
-                    @Override
-                    public String next() {
-                        return i.next().key();
-                    }
-                };
             }
 
             @Override
