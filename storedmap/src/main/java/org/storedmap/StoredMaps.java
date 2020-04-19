@@ -15,7 +15,6 @@
  */
 package org.storedmap;
 
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -28,18 +27,21 @@ public class StoredMaps implements Iterable<StoredMap> {
 
     private final Iterable<String> _iterable;
     private final Category _category;
-    private final boolean _includeCached;
+    private final boolean _includeKeyOrSecondaryKayCached; // true - include normal key cached, false - secondary kay cached
+    private final String _secondaryKey;
+
+    StoredMaps(Category category, Iterable<String> iterable, String secondaryKey) {
+        _iterable = iterable;
+        _category = category;
+        _includeKeyOrSecondaryKayCached = false;
+        _secondaryKey = secondaryKey;
+    }
 
     StoredMaps(Category category, Iterable<String> iterable) {
         _iterable = iterable;
         _category = category;
-        _includeCached = false;
-    }
-
-    StoredMaps(Category category, Iterable<String> iterable, boolean includeCachedInCategory) {
-        _iterable = iterable;
-        _category = category;
-        _includeCached = includeCachedInCategory;
+        _includeKeyOrSecondaryKayCached = true;
+        _secondaryKey = null;
     }
 
     @Override
@@ -71,10 +73,10 @@ public class StoredMaps implements Iterable<StoredMap> {
             boolean _switched = false;
 
             {
-                if (_includeCached) {
-                    _keyCache = _category.keyCache();
+                if (_includeKeyOrSecondaryKayCached) {
+                    _keyCache = _category._keyCache();
                 } else {
-                    _keyCache = Collections.EMPTY_SET;
+                    _keyCache = _category._secondaryKeyCache(_secondaryKey);
                 }
             }
 

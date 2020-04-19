@@ -15,7 +15,6 @@
  */
 package org.storedmap;
 
-import static org.storedmap.MapData.NOTAGSMAGICAL;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,6 +30,7 @@ import java.util.Set;
 import org.apache.commons.lang3.SerializationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.storedmap.MapData.NOTAGSMAGICAL;
 
 /**
  *
@@ -134,18 +134,8 @@ public class StoredMap implements Map<String, Object> {
 
             store.getPersister().scheduleForPersist(this, null, false, true);//cancelSave(_holder);
 
-            _category.removeFromCache(_holder.getKey());
-//            driver.remove(_holder.getKey(), _category.internalIndexName(), store.getConnection(), new Runnable() {
-//                @Override
-//                public void run() {
-//                    synchronized (_holder) {
-//                        driver.unlock(_holder.getKey(), _category.internalIndexName(), store.getConnection());
-//                        _holder.notify();
-//                        LOG.debug("Removed {}-{}", _holder.getCategory().name(), _holder.getKey());
-//                    }
-//                }
-//            });
-
+            _category._removeFromCache(_holder.getKey());
+            _category._uncacheSecondaryKey(_holder.getKey(), getMapData()); // TODO: this is the latest addition. Can it slow everything down?
         }
     }
 
@@ -191,6 +181,7 @@ public class StoredMap implements Map<String, Object> {
             MapData map = _getOrLoadForPersist(callback);
             //System.out.println("putting sorter: " + sorter.toString() + " for key " + _holder.getKey());
             map.setSecondaryKey(secondaryKey);
+            _category._cacheSecondaryKey(_holder.getKey(), map);
         }
     }
 

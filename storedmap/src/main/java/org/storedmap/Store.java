@@ -28,10 +28,10 @@ import java.util.UUID;
  * A database representation.
  *
  * <p>
- * An object of this class represents a database and is initialized with the 
+ * An object of this class represents a database and is initialized with the
  * properties object that contains data to connect to the underlying database.
  * </p>
- * 
+ *
  * <p>
  * The two main properties are:</p>
  *
@@ -44,8 +44,8 @@ import java.util.UUID;
  * <p>
  * The same properties list may contain the configuration items that the driver
  * will use. It is advised that these additional properties have some driver
- * specific prefix. Examples of the additional properties are the JDBC 
- * connection string, credentials and the JDBC driver name. (Note that the JDBC 
+ * specific prefix. Examples of the additional properties are the JDBC
+ * connection string, credentials and the JDBC driver name. (Note that the JDBC
  * driver is different to the Storedmap driver)</p>
  *
  *

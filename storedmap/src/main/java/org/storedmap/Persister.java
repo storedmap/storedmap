@@ -273,6 +273,7 @@ public class Persister {
                             if (!_needRemove) {
                                 if (!_tryReschedule()) {
                                     _inWork.remove(_holder);
+                                    category._uncacheSecondaryKey(_holder.getKey(), _mapData);
                                 }
                             }
                         }
@@ -301,6 +302,7 @@ public class Persister {
                                                 } else {
                                                     driver.unlock(_holder.getKey(), indexName, connection);
                                                     _inLongWork.remove(_holder);
+                                                    category._uncacheSecondaryKey(_holder.getKey(), _mapData);
                                                     LOG.debug("Unlocked after full save of {}-{}", _holder.getCategory().name(), _holder.getKey());
                                                 }
                                                 _holder.notify();
@@ -322,6 +324,7 @@ public class Persister {
                     Object connection = _store.getConnection();
                     String indexName = category.internalIndexName();
 
+                    category._uncacheSecondaryKey(_holder.getKey(), _mapData);
                     driver.unlock(_holder.getKey(), indexName, connection);
                     _inLongWork.remove(_holder);
                     _holder.notify();

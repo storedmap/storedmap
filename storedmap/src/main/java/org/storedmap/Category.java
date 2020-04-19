@@ -76,6 +76,7 @@ public class Category implements Map<String, Map<String, Object>> {
     private final List<Locale> _locales = new ArrayList<>();
     private RuleBasedCollator _collator;
     private final WeakHashMap<String, WeakReference<WeakHolder>> _cache = new WeakHashMap<>();
+    private final HashMap<String, Set<String>> _secondaryKeyCache = new HashMap<>();
     private final int _hash;
 
     private Category() {
@@ -191,15 +192,71 @@ public class Category implements Map<String, Map<String, Object>> {
         return _indexName;
     }
 
-    void removeFromCache(String key) {
+    void _removeFromCache(String key) {
         synchronized (_cache) {
             _cache.remove(key);
         }
     }
 
-    Set<String> keyCache() {
+    Set<String> _keyCache() {
         synchronized (_cache) {
             return new HashSet(_cache.keySet());
+        }
+    }
+
+    Set<String> _secondaryKeyCache(String secondaryKey) {
+        if (secondaryKey != null) {
+            Set<String> secs;
+            synchronized (_secondaryKeyCache) {
+                secs = _secondaryKeyCache.get(secondaryKey);
+            }
+            if (secs == null) {
+                return Collections.EMPTY_SET;
+            }
+            synchronized (secs) {
+                return new HashSet<>(secs);
+            }
+        } else {
+            return Collections.EMPTY_SET;
+        }
+    }
+
+    void _cacheSecondaryKey(String key, MapData map) {
+        String secondaryKey = map.getSecondarKey();
+        if (secondaryKey != null) {
+            Set<String> secs;
+            synchronized (_secondaryKeyCache) {
+                secs = _secondaryKeyCache.get(secondaryKey);
+                if (secs == null) {
+                    secs = new HashSet<>();
+                    _secondaryKeyCache.put(secondaryKey, secs);
+                }
+            }
+            synchronized (secs) {
+                secs.add(key);
+            }
+        }
+    }
+
+    void _uncacheSecondaryKey(String key, MapData map) {
+        String secondaryKey = map.getSecondarKey();
+        if (secondaryKey != null) {
+            Set<String> secs;
+            synchronized (_secondaryKeyCache) {
+                secs = _secondaryKeyCache.get(secondaryKey);
+            }
+            if (secs != null) {
+                boolean remove;
+                synchronized (secs) {
+                    secs.remove(key);
+                    remove = secs.isEmpty();
+                }
+                if (remove) {
+                    synchronized (_secondaryKeyCache) {
+                        _secondaryKeyCache.remove(secondaryKey);
+                    }
+                }
+            }
         }
     }
 
@@ -301,14 +358,14 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return all StoredMaps of this Category
      */
     public Iterable<StoredMap> maps() {
-        return new StoredMaps(this, _driver.get(_indexName, _connection), true);
+        return new StoredMaps(this, _driver.get(_indexName, _connection));
     }
 
     public Iterable<String> keys() {
         return new Iterable<String>() {
             @Override
             public Iterator<String> iterator() {
-                return new StoredMaps(Category.this, _driver.get(_indexName, _connection), true).keyIterator();
+                return new StoredMaps(Category.this, _driver.get(_indexName, _connection)).keyIterator();
             }
         };
     }
@@ -338,7 +395,7 @@ public class Category implements Map<String, Map<String, Object>> {
         }
         byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        return new StoredMaps(this, _driver.get(_indexName, _connection, secondaryKey, min, max, anyOfTags, ascending, textQuery));
+        return new StoredMaps(this, _driver.get(_indexName, _connection, secondaryKey, min, max, anyOfTags, ascending, textQuery), (minSorter != null || maxSorter != null || anyOfTags != null || ascending != null || textQuery != null ? null : secondaryKey));
     }
 
     public Iterable<String> keys(String secondaryKey, Object minSorter, Object maxSorter, String[] anyOfTags, Boolean ascending, String textQuery) {
@@ -353,7 +410,7 @@ public class Category implements Map<String, Map<String, Object>> {
         return new Iterable<String>() {
             @Override
             public Iterator<String> iterator() {
-                return new StoredMaps(Category.this, _driver.get(_indexName, _connection, secondaryKey, min, max, anyOfTagsFinal, ascending, textQuery)).keyIterator();
+                return new StoredMaps(Category.this, _driver.get(_indexName, _connection, secondaryKey, min, max, anyOfTagsFinal, ascending, textQuery), (minSorter != null || maxSorter != null || anyOfTags != null || ascending != null || textQuery != null ? null : secondaryKey)).keyIterator();
             }
         };
     }
@@ -381,7 +438,7 @@ public class Category implements Map<String, Map<String, Object>> {
         }
         byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, secondaryKey, min, max, anyOfTags, ascending, textQuery, from, size));
+        StoredMaps maps = new StoredMaps(this, _driver.get(_indexName, _connection, secondaryKey, min, max, anyOfTags, ascending, textQuery, from, size), (minSorter != null || maxSorter != null || anyOfTags != null || ascending != null || textQuery != null ? null : secondaryKey));
         ArrayList<StoredMap> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         for (StoredMap map : maps) {
             ret.add(map);
@@ -395,7 +452,7 @@ public class Category implements Map<String, Map<String, Object>> {
         }
         byte[] min = Util.translateSorterIntoBytes(minSorter, _collator, _driver.getMaximumSorterLength(_connection));
         byte[] max = Util.translateSorterIntoBytes(maxSorter, _collator, _driver.getMaximumSorterLength(_connection));
-        Iterator<String> keys = new StoredMaps(this, _driver.get(_indexName, _connection, secondaryKey, min, max, anyOfTags, ascending, textQuery, from, size)).keyIterator();
+        Iterator<String> keys = new StoredMaps(this, _driver.get(_indexName, _connection, secondaryKey, min, max, anyOfTags, ascending, textQuery, from, size), (minSorter != null || maxSorter != null || anyOfTags != null || ascending != null || textQuery != null ? null : secondaryKey)).keyIterator();
         ArrayList<String> ret = new ArrayList<>((int) (size > 1000 ? 1000 : size * 1.7));
         while (keys.hasNext()) {
             ret.add(keys.next());
