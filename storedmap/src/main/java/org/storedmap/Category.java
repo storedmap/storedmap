@@ -244,16 +244,12 @@ public class Category implements Map<String, Map<String, Object>> {
             Set<String> secs;
             synchronized (_secondaryKeyCache) {
                 secs = _secondaryKeyCache.get(secondaryKey);
-            }
-            if (secs != null) {
-                boolean remove;
-                synchronized (secs) {
-                    secs.remove(key);
-                    remove = secs.isEmpty();
-                }
-                if (remove) {
-                    synchronized (_secondaryKeyCache) {
-                        _secondaryKeyCache.remove(secondaryKey);
+                if (secs != null) {
+                    synchronized (secs) {
+                        secs.remove(key);
+                        if (secs.isEmpty()) {
+                            _secondaryKeyCache.remove(secondaryKey);
+                        }
                     }
                 }
             }

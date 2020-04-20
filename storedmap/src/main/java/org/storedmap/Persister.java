@@ -77,6 +77,7 @@ public class Persister {
             public void run() {
                 synchronized (holder) {
                     _store.getDriver().unlock(holder.getKey(), storedMap.category().internalIndexName(), _store.getConnection());
+                    //storedMap.category()._uncacheSecondaryKey(storedMap.key(), storedMap.getMapData());
                     holder.notify();
                     LOG.debug("Removed {}-{}", holder.getCategory().name(), holder.getKey());
                     if (callback != null) {
@@ -273,7 +274,7 @@ public class Persister {
                             if (!_needRemove) {
                                 if (!_tryReschedule()) {
                                     _inWork.remove(_holder);
-                                    category._uncacheSecondaryKey(_holder.getKey(), _mapData);
+                                    //category._uncacheSecondaryKey(_holder.getKey(), _mapData);
                                 }
                             }
                         }
@@ -324,8 +325,8 @@ public class Persister {
                     Object connection = _store.getConnection();
                     String indexName = category.internalIndexName();
 
-                    category._uncacheSecondaryKey(_holder.getKey(), _mapData);
                     driver.unlock(_holder.getKey(), indexName, connection);
+                    category._uncacheSecondaryKey(_holder.getKey(), _mapData);
                     _inLongWork.remove(_holder);
                     _holder.notify();
                     LOG.debug("Unlocking after failing to save of {}-{}", _holder.getCategory().name(), _holder.getKey());
