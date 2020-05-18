@@ -300,6 +300,9 @@ public class Category implements Map<String, Map<String, Object>> {
      * @return the StoredMap, either new or previously persisted
      */
     public StoredMap map(String key) {
+        if (key == null) {
+            return null;
+        }
         StoredMap ret;
         synchronized (_cache) {
             WeakHolder cached;
@@ -340,8 +343,12 @@ public class Category implements Map<String, Map<String, Object>> {
      */
     public StoredMap create(String key) {
         StoredMap ret = map(key);
-        ret.fastCreate = true;
-        return ret;
+        try {
+            ret.fastCreate = true;
+            return ret;
+        } catch (NullPointerException e) {
+            return null;
+        }
     }
 
     /**
@@ -550,6 +557,9 @@ public class Category implements Map<String, Map<String, Object>> {
     @Override
     public synchronized Map<String, Object> put(String key, Map<String, Object> value) {
         StoredMap sm = map(key);
+        if (sm == null) {
+            return null;
+        }
         Map<String, Object> ret;
         if (!sm.isEmpty()) {
             ret = Collections.unmodifiableMap(new HashMap<>(sm));
